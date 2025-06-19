@@ -98,24 +98,25 @@ class Stats2b2tBot:
             print(error)
             return error
 
-    async def get_reply_kbd(self, user_id):
-        keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [
-                    KeyboardButton(text=await self.get_translation(user_id, "get2b2tinfo")),
-                    KeyboardButton(text=await self.get_translation(user_id, "getPlayerStats"))
+    async def get_reply_kbd(self, user_id, chat_type):
+        if chat_type  == ChatType.PRIVATE:
+            keyboard = ReplyKeyboardMarkup(
+                keyboard=[
+                    [
+                        KeyboardButton(text=await self.get_translation(user_id, "get2b2tinfo")),
+                        KeyboardButton(text=await self.get_translation(user_id, "getPlayerStats"))
+                    ],
+                    [
+                        KeyboardButton(text=await self.get_translation(user_id, "searchChat")),
+                        KeyboardButton(text=await self.get_translation(user_id, "getSettings"))
+                    ]
                 ],
-                [
-                    KeyboardButton(text=await self.get_translation(user_id, "searchChat")),
-                    KeyboardButton(text=await self.get_translation(user_id, "getSettings"))
-                ]
-            ],
 
-            resize_keyboard=True,  # автоматическое изменение размера кнопок
-            one_time_keyboard=False,  # скрыть клавиатуру после нажатия
-            input_field_placeholder="Выберите действие..."  # подсказка в поле ввода
-        )
-        return keyboard
+                resize_keyboard=True,  # автоматическое изменение размера кнопок
+                one_time_keyboard=False,  # скрыть клавиатуру после нажатия
+                input_field_placeholder="Выберите действие..."  # подсказка в поле ввода
+            )
+            return keyboard
 
     def get_lang_keyboard(self, user_id):
         builder = InlineKeyboardBuilder()
@@ -152,7 +153,7 @@ class Stats2b2tBot:
                 message.from_user.id,
                 "startMessage",
                 hd.quote(message.from_user.first_name)
-            ), reply_markup=await self.get_reply_kbd(message.from_user.id)
+            ), reply_markup=await self.get_reply_kbd(message.from_user.id, message.chat.type)
         )
 
     async def handler_help(self, message: types.Message) -> None:
@@ -164,7 +165,7 @@ class Stats2b2tBot:
                 message.from_user.id,
                 "helpMessage",
                 hd.quote(message.from_user.first_name)
-            ), reply_markup=await self.get_reply_kbd(message.from_user.id)
+            )
         )
 
     async def get_settings_keyboard(self, user_id):
@@ -226,7 +227,10 @@ class Stats2b2tBot:
                                                                                 user_id, "langName")),
                                                  reply_markup=builder.as_markup())
 
-                await self.bot.send_message(user_id, await self.get_translation(user_id, "startMessage", callback.from_user.first_name), reply_markup=await self.get_reply_kbd(user_id))
+
+                await self.bot.send_message(user_id, await self.get_translation(user_id, "startMessage",
+                                                                                callback.from_user.first_name),
+                                            reply_markup=await self.get_reply_kbd(user_id, callback.chat.type))
 
     async def handler_callback_set_lang(self, callback: CallbackQuery) -> None:
         try:
@@ -301,7 +305,10 @@ class Stats2b2tBot:
 
             user_configs["mode"] = "player_stats"
             await self.ses.update_configs(message.from_user.id, json.dumps(user_configs))
-            await message.reply(await self.get_translation(message.from_user.id, "enterPlayer"))
+            if message.chat.type == ChatType.PRIVATE:
+                await message.reply(await self.get_translation(message.from_user.id, "enterPlayer"))
+            else:
+                await message.reply(await self.get_translation(message.from_user.id, "enterPlayerInCommand"))
             return
         if not query:
             user_configs = (await self.ses.get_user_stats(message.from_user.id))["configs"]
@@ -328,8 +335,13 @@ class Stats2b2tBot:
         except Exception as e:
             logging.error(f"API Error: {type(e).__name__}: {e}")
             await message.reply(await self.get_translation(message.from_user.id, "error"))
+
     async def search_2b2t_chat(self, user_id, args):
         return "ПОИСК ВЫПОЛНЕН 0"
+    def is_command(self, text):
+        if text.startswith("/"):
+            return True
+        return False
     async def handler_2b2t_info(self, message: types.Message, register_msg: bool = True) -> None:
         if register_msg:
             await self.on_msg(message)
@@ -348,6 +360,7 @@ class Stats2b2tBot:
             await message.reply(await self.get_translation(message.from_user.id, "userError"))
 
     async def handler_search_chat(self, message: types.Message, register_msg: bool = True) -> None:
+        print(983)
         user_id = message.from_user.id
         if register_msg:
             await self.on_msg(message)
@@ -356,6 +369,7 @@ class Stats2b2tBot:
         lst = message.text.split()
         if len(lst) > 1:
             query = lst[1:]
+            print("q: ", query)
         else:
             user_configs = (await self.ses.get_user_stats(message.from_user.id))["configs"]
             user_configs["mode"] = CHAT_SERACH_MODE
@@ -414,10 +428,10 @@ class Stats2b2tBot:
 
             elif message.text == await self.get_translation(message.from_user.id, "getSettings"):
                 await self.handler_settings(message, register_msg=False)
-                print(1009) #
                 return
 
             elif message.text == await self.get_translation(message.from_user.id, "searchChat"):
+                print(9990)
                 await message.reply(await self.get_translation(message.from_user.id, "enterChatSearchQuery"))
                 config_mode = CHAT_SERACH_MODE
 
@@ -426,7 +440,7 @@ class Stats2b2tBot:
                 return
 
             elif user_configs.get("mode", None) == CHAT_SERACH_MODE:
-                await self.handler_player_stats(message, register_msg=False)
+                await self.handler_search_chat(message, register_msg=False)
                 return
 
             else:
@@ -435,7 +449,6 @@ class Stats2b2tBot:
             if not config_mode is None:
                 user_configs["mode"] = config_mode
                 await self.ses.update_configs(message.from_user.id, json.dumps(user_configs))
-
 
     async def run(self) -> None:
         await self.dp.start_polling(self.bot)

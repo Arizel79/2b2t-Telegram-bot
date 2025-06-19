@@ -18,6 +18,7 @@
         "settingsEditLang": "Выберите язык",
         "searchChat": "\uD83D\uDCAC Сообщения в чате",
     "enterPlayer": "⬇\uFE0F Введите никнейм игрока:",
+    "enterPlayerInCommand": "Используйте: <code>/player name</code>",
     "enterChatSearchQuery": "⬇\uFE0F Введите запрос для поиска по сообщениям чата 2b2t:",
     "menuEditLang": "\uD83C\uDDF7\uD83C\uDDFA/\uD83C\uDDEC\uD83C\uDDE7 Изменить язык",
     "settingsMenuTitle": "<b>⚙\uFE0F Настройки</b>\nНажмите на кнопки ниже",
