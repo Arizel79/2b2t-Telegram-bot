@@ -26,6 +26,10 @@ logging.basicConfig(level=logging.WARN)
 
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+ADMIN_ID = int(os.getenv("ADMIN_ID", ""))
+LOGS_GROUP_ID = int(os.getenv("LOGS_GROUP_ID", ""))
+LOGS_GROUP_THREAD_ID = int(os.getenv("LOGS_GROUP_THREAD_ID", "0"))
+
 assert TELEGRAM_BOT_TOKEN != "", "TELEGRAM_BOT_TOKEN is invalid"
 
 
@@ -68,12 +72,23 @@ class Stats2b2tBot:
 
         self.dp.callback_query(F.data.startswith("setlang"))(self.handler_set_lang)
 
-    async def get_printable_user(self, from_user: types.User) -> str:
-        return (
+    async def get_printable_user(self, from_user: types.User, from_chat: types.Chat=None, formatting=False) -> str:
+        if formatting:
+            return (
+            f"{html.escape(from_user.first_name)}"
+            f"{'' if not from_user.last_name else f' {html.escape(from_user.last_name)}'}"
+            f" ({f'@{from_user.username}, ' if from_user.username else ''}"
+            f"<a href=\"{'tg://user?id='+str(from_user.id)})\">"+ str(from_user.id)+ "</a>"
+            f"{(', chat: ' + '<code>' +str(from_chat.id) + '</code>') if not from_chat is None else ''})"
+
+        )
+        else:
+            return (
             f"{from_user.first_name}"
             f"{'' if not from_user.last_name else f' {from_user.last_name}'}"
-            f" ({f'@{from_user.username}, ' if from_user.username else ''}{from_user.id})"
-        )
+            f" ({f'@{from_user.username}, ' if from_user.username else ''}"
+            f"{'tg://user?id='+str(from_user.id)}"
+            f"{(', chat_id: ' +str(from_chat.id)) if not from_chat is None else ''})")
 
     async def get_printable_time(self) -> str:
         return time.strftime("%H:%M.%S %d.%m.%Y", time.localtime())
@@ -128,11 +143,14 @@ class Stats2b2tBot:
         return builder.as_markup()
 
     async def on_msg(self, msg: types.Message) -> None:
-        await self.write_msg(f"{await self.get_printable_user(msg.from_user)}: {msg.text}")
+        await self.write_msg(f"{await self.get_printable_user(msg.from_user, from_chat=msg.chat)}: {msg.text}")
+        await self.bot.send_message(LOGS_GROUP_ID,
+                                f"{await self.get_printable_user(msg.from_user, from_chat=msg.chat, formatting=True)}:\n <code>{html.escape(msg.text)}</code>",
+                                    message_thread_id=LOGS_GROUP_THREAD_ID)
         user_id = msg.from_user.id
         if not await self.ses.check_user_found(user_id):
             await self.ses.get_user(user_id)
-            await self.write_msg(f"{await self.get_printable_user(msg.from_user)} new user!")
+            await self.write_msg(f"{await self.get_printable_user(msg.from_user, from_chat=msg.chat)} new user!")
 
         if not await self.ses.is_user_select_lang(msg.from_user.id):
             await msg.reply(
@@ -234,6 +252,10 @@ class Stats2b2tBot:
 
     async def handler_callback_set_lang(self, callback: CallbackQuery) -> None:
         try:
+            if not callback.message.reply_to_message.from_user.id == callback.from_user.id:
+                await callback.answer("Access denied!", show_alert=True)
+                return
+
             print("callback.data: ", callback.data)
             lst = callback.data.split()
             if len(lst) != 3:
