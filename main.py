@@ -388,16 +388,22 @@ class Stats2b2tBot:
             await self.on_msg(message)
         if not await self.is_handler_msgs(message.from_user.id):
             return
-        lst = message.text.split()
-        if len(lst) > 1:
-            query = lst[1:]
-            print("q: ", query)
+
+        if self.is_command(message.text):
+            lst = message.text.split()
+            if len(lst) > 1:
+                query = lst[1:]
+                print("q: ", query)
         else:
-            user_configs = (await self.ses.get_user_stats(message.from_user.id))["configs"]
-            user_configs["mode"] = CHAT_SERACH_MODE
-            await self.ses.update_configs(message.from_user.id, json.dumps(user_configs))
-            await message.reply(await self.get_translation(user_id, "enterChatSearchQuery"))
-            return
+            query = message.text
+
+
+        user_configs = (await self.ses.get_user_stats(message.from_user.id))["configs"]
+        # user_configs["mode"] = CHAT_SERACH_MODE
+        await self.ses.update_configs(message.from_user.id, json.dumps(user_configs))
+        await message.reply("функция пока не работает")
+        # await message.reply(await self.get_translation(user_id, "enterChatSearchQuery"))
+        return
 
         msg_my = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"))
         try:
@@ -453,7 +459,6 @@ class Stats2b2tBot:
                 return
 
             elif message.text == await self.get_translation(message.from_user.id, "searchChat"):
-                print(9990)
                 await message.reply(await self.get_translation(message.from_user.id, "enterChatSearchQuery"))
                 config_mode = CHAT_SERACH_MODE
 
