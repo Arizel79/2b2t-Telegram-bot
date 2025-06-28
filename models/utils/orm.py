@@ -18,9 +18,17 @@ class User(Base):
     requests = Column(Integer, default=0)
     configs = Column(String, default="{}")
 
+class SavedState(Base):
+    __tablename__ = 'saved'
+
+    id = Column(Integer, primary_key=True)
+    data = Column(String, default='{}')
+
+
+
 
 class AsyncDatabaseSession:
-    def __init__(self, db_url='sqlite+aiosqlite:///data.sqlite'):
+    def __init__(self, db_url='sqlite+aiosqlite:///2b2t_bot_data.sqlite'):
         self.engine = create_async_engine(db_url, echo=False)
         self.async_session = async_sessionmaker(
             self.engine, expire_on_commit=False, class_=AsyncSession
@@ -39,6 +47,27 @@ class AsyncDatabaseSession:
                 await session.commit()
             return user
 
+    async def get_saved_state(self, state_id: int) -> SavedState:
+        async with self.async_session() as session:
+            saved_state = await session.get(SavedState, state_id)
+            return json.loads(saved_state.data)
+
+    async def add_saved_state(self, data: dict) -> int:
+        async with self.async_session() as session:
+            saved_state = SavedState(data=json.dumps(data))
+            session.add(saved_state)
+            await session.commit()
+            return saved_state.id
+
+    async def update_saved_state(self, state_id: int, data: dict):
+        async with self.async_session() as session:
+            saved_state = await session.get(SavedState, state_id)
+            if saved_state:
+                saved_state.data = json.dumps(data)
+                await session.commit()
+                return True
+            return False
+
     async def check_user_found(self, user_id: int):
         async with self.async_session() as session:
             user = await session.get(User, user_id)
@@ -52,6 +81,7 @@ class AsyncDatabaseSession:
             if user:
                 user.lang = lang
                 await session.commit()
+
     async def update_configs(self, user_id: int, configs: str):
         async with self.async_session() as session:
             user = await session.get(User, user_id)
@@ -105,6 +135,7 @@ if __name__ == '__main__':
     import asyncio
     db = AsyncDatabaseSession()
     async def main():
-        print(await db.is_user_select_lang(1660566283))
+        await db.create_all()
+        print(await db.update_saved_state(1, {"five": "lolllll"}))
     asyncio.run(main())
 

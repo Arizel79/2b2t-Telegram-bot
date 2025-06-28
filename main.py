@@ -7,11 +7,13 @@ from aiogram.enums import ParseMode
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import html
 import time
+import requests
 
 from models.utils.orm import AsyncDatabaseSession
 from models.utils.translations import *
 from models.handlers.help_message import *
 from models.handlers.start_message import *
+from models.handlers.donate_message import *
 from models.handlers.callback_settings import *
 from models.handlers.command_set_language import *
 from models.handlers.callback_set_language import *
@@ -20,6 +22,7 @@ from models.handlers.search_chat import *
 from models.handlers.get_player_stats import *
 from models.handlers.get_2b2t_info import *
 from models.handlers.get_2b2t_tablist import *
+from models.handlers.callback_nav_chat_search import *
 from models.handlers.text import *
 
 
@@ -28,6 +31,7 @@ class Stats2b2tBot:
     handler_start_message = handler_start_message
     handler_callback_settings = handler_callback_settings
     handler_command_set_language = handler_command_set_language
+    handler_donate_message = handler_donate_message
     handler_callback_set_language = handler_callback_set_language
     handler_settings_message = handler_settings_message
     handler_search_chat = handler_search_chat
@@ -36,6 +40,7 @@ class Stats2b2tBot:
     handler_get_2b2t_tablist = handler_get_2b2t_tablist
     handler_text = handler_text
     handler_help_message = handler_help_message
+    handler_nav_chat_search = handler_nav_chat_search
     async def get_translation(self, *kwargs):
         return await self.translator.get_translation(*kwargs)
 
@@ -55,6 +60,7 @@ class Stats2b2tBot:
 
         self.logger.info("Program started")
 
+
     async def initialize(self):
         await self.db.create_all()
         await self._register_handlers()
@@ -70,9 +76,11 @@ class Stats2b2tBot:
         self.dp.message(Command("start"))(self.handler_start_message)
         self.dp.message(Command("settings"))(self.handler_settings_message)
         self.dp.message(Command("help"))(self.handler_help_message)
+        self.dp.message(Command("donate"))(self.handler_donate_message)
         self.dp.message(Command("messages", "m", "chat", "search", "s", "chat_search"))(self.handler_search_chat)
         self.dp.callback_query(F.data.startswith("setlang"))(self.handler_callback_set_language)
         self.dp.callback_query(F.data.startswith("settings"))(self.handler_callback_settings)
+        self.dp.callback_query(F.data.startswith("chat_search"))(self.handler_nav_chat_search)
         self.dp.message(Command("player", "pl", "p"))(self.handler_get_player_stats)
         self.dp.message(Command("i", "info", "stats", "stat"))(self.handler_get_2b2t_info)
         self.dp.message(Command("tab", "t", "tablist"))(self.handler_get_2b2t_tablist)
@@ -124,7 +132,26 @@ class Stats2b2tBot:
                 input_field_placeholder="Выберите действие..."  # подсказка в поле ввода
             )
             return keyboard
-
+    async def get_nav_chat_search(self, query_id, user_id=None):
+        builder = InlineKeyboardBuilder()
+        q_data = self.api_2b2t.recent_querys[query_id]
+        if q_data['page'] > 1:
+            builder.add(
+                InlineKeyboardButton(text="back page",
+                                     callback_data=f"chat_search {query_id} goto {q_data['page'] - 1}"))
+        else:
+             builder.add(
+                    InlineKeyboardButton(text="back page",
+                                         callback_data=f"chat_search none"))
+        builder.add(
+            InlineKeyboardButton(text=f"{q_data['page']} / {q_data['pages_count']}",
+                                 callback_data=f"none"))
+        builder.add(
+            InlineKeyboardButton(text="next page",
+                                 callback_data=f"chat_search {query_id} goto {q_data['page'] + 1}")
+        )
+        builder.adjust(3)
+        return builder.as_markup()
     def get_lang_keyboard(self, user_id):
         builder = InlineKeyboardBuilder()
         builder.add(

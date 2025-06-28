@@ -48,7 +48,7 @@ async def handler_text(self, message: types.Message) -> None:
             return
 
         else:
-            await self.handler_start(message, register_msg=False)
+            await self.handler_start_message(message, register_msg=False)
 
         if not config_mode is None:
             user_configs["mode"] = config_mode

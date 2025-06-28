@@ -1,6 +1,9 @@
 import logging
 from aiogram import types
 import json
+from random import randint
+from models.utils.config import *
+
 
 async def handler_search_chat(self, message: types.Message, register_msg: bool = True) -> None:
     user_id = message.from_user.id
@@ -10,27 +13,36 @@ async def handler_search_chat(self, message: types.Message, register_msg: bool =
         return
 
     if self.is_command(message.text):
+
         lst = message.text.split()
         if len(lst) > 1:
-            query = lst[1:]
+            query = " ".join(lst[1:])
             print("q: ", query)
+        else:
+            user_configs = (await self.db.get_user_stats(message.from_user.id))["configs"]
+            user_configs["mode"] = CHAT_SERACH_MODE
+            await self.db.update_configs(message.from_user.id, json.dumps(user_configs))
+            return
     else:
         query = message.text
 
     user_configs = (await self.db.get_user_stats(message.from_user.id))["configs"]
     # user_configs["mode"] = CHAT_SERACH_MODE
     await self.db.update_configs(message.from_user.id, json.dumps(user_configs))
-    await message.reply("функция пока не работает")
-    # await message.reply(await self.get_translation(user_id, "enterChatSearchQuery"))
-    return
+    query_id = randint(0, 999999)
+    self.api_2b2t.recent_querys[query_id] = {"type": "search chat", "word": query, "page": 1,
+                                             "user_id": message.from_user.id}
+
 
     msg_my = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"))
     try:
-        answer = await self.search_2b2t_chat(message.from_user.id, query)
-        await msg_my.edit_text(answer)
-    except api.Api2b2tError as e:
-        logging.error(f"Api2b2tError: {e}")
-        await message.reply(await self.get_translation(message.from_user.id, "error"))
-    except Exception as e:
-        logging.error(f"API Error: {type(e).__name__}: {e}")
-        await message.reply(await self.get_translation(message.from_user.id, "userError"))
+        answer = await self.api_2b2t.get_printable_2b2t_chat_search_page(query_id)
+        await msg_my.edit_text(answer, reply_markup=await self.get_nav_chat_search(query_id))
+    # except self.api_2b2t.Api2b2tError as e:
+    #     logging.error(f"Api2b2tError: {e}")
+    #     await message.reply(await self.get_translation(message.from_user.id, "error"))
+    # except Exception as e:
+    #     logging.error(f"API Error: {type(e).__name__}: {e}")
+    #     await message.reply(await self.get_translation(message.from_user.id, "userError"))
+    finally:
+        pass
