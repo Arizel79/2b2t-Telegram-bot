@@ -3,7 +3,7 @@ from aiogram.utils.markdown import html_decoration as hd
 
 
 async def handler_help_message(self, message: types.Message) -> None:
-    await self.on_msg(message)
+    await self.on_event(message)
     if not await self.is_handler_msgs(message.from_user.id):
         return
     await message.reply(

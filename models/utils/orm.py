@@ -54,10 +54,17 @@ class AsyncDatabaseSession:
 
     async def add_saved_state(self, data: dict) -> int:
         async with self.async_session() as session:
-            saved_state = SavedState(data=json.dumps(data))
-            session.add(saved_state)
-            await session.commit()
-            return saved_state.id
+            try:
+                saved_state = SavedState(data=json.dumps(data))
+                session.add(saved_state)
+                await session.flush()
+                await session.commit()
+                return saved_state.id
+
+            except Exception as e:
+                await session.rollback()
+                print(f"Database error: {type(e)} - {e}")
+                raise
 
     async def update_saved_state(self, state_id: int, data: dict):
         async with self.async_session() as session:
@@ -135,7 +142,12 @@ if __name__ == '__main__':
     import asyncio
     db = AsyncDatabaseSession()
     async def main():
+        db = AsyncDatabaseSession()
         await db.create_all()
-        print(await db.update_saved_state(1, {"five": "lolllll"}))
+        try:
+            state_id = await db.add_saved_state({"key": "value"})
+            print(f"Success! ID: {state_id}")
+        except Exception as e:
+            print(f"Failed: {e}")
     asyncio.run(main())
 

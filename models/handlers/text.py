@@ -17,7 +17,7 @@ from models.handlers.get_2b2t_tablist import *
 
 
 async def handler_text(self, message: types.Message) -> None:
-    await self.on_msg(message)
+    await self.on_event(message)
     if not await self.is_handler_msgs(message.from_user.id):
         return
     if message.chat.type == ChatType.PRIVATE:
@@ -33,6 +33,10 @@ async def handler_text(self, message: types.Message) -> None:
 
         elif message.text == await self.get_translation(message.from_user.id, "getSettings"):
             await self.handler_settings_message(message, register_msg=False)
+            return
+
+        elif message.text == await self.get_translation(message.from_user.id, "sendDonate"):
+            await self.handler_donate_message(message, register_msg=False)
             return
 
         elif message.text == await self.translator.get_translation(message.from_user.id, "searchChat"):

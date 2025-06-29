@@ -1,3 +1,5 @@
+from email.message import Message
+
 from aiogram import Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram import Bot
@@ -22,7 +24,8 @@ from models.handlers.search_chat import *
 from models.handlers.get_player_stats import *
 from models.handlers.get_2b2t_info import *
 from models.handlers.get_2b2t_tablist import *
-from models.handlers.callback_nav_chat_search import *
+from models.handlers.tablist_callback import *
+from models.handlers.chat_search_callback import *
 from models.handlers.text import *
 
 
@@ -40,7 +43,8 @@ class Stats2b2tBot:
     handler_get_2b2t_tablist = handler_get_2b2t_tablist
     handler_text = handler_text
     handler_help_message = handler_help_message
-    handler_nav_chat_search = handler_nav_chat_search
+    handler_chat_search_callback = handler_chat_search_callback
+    handler_tablist_callback = handler_tablist_callback
     async def get_translation(self, *kwargs):
         return await self.translator.get_translation(*kwargs)
 
@@ -75,12 +79,12 @@ class Stats2b2tBot:
 
         self.dp.message(Command("start"))(self.handler_start_message)
         self.dp.message(Command("settings"))(self.handler_settings_message)
-        self.dp.message(Command("help"))(self.handler_help_message)
+        self.dp.message(Command("help", "h"))(self.handler_help_message)
         self.dp.message(Command("donate"))(self.handler_donate_message)
-        self.dp.message(Command("messages", "m", "chat", "search", "s", "chat_search"))(self.handler_search_chat)
-        self.dp.callback_query(F.data.startswith("setlang"))(self.handler_callback_set_language)
+        self.dp.message(Command("messages", "m", "chat", "search", "s", "chat_search", "chats"))(self.handler_search_chat)
         self.dp.callback_query(F.data.startswith("settings"))(self.handler_callback_settings)
-        self.dp.callback_query(F.data.startswith("chat_search"))(self.handler_nav_chat_search)
+        self.dp.callback_query(F.data.startswith("chat_search"))(self.handler_chat_search_callback)
+        self.dp.callback_query(F.data.startswith("tablist"))(self.handler_tablist_callback)
         self.dp.message(Command("player", "pl", "p"))(self.handler_get_player_stats)
         self.dp.message(Command("i", "info", "stats", "stat"))(self.handler_get_2b2t_info)
         self.dp.message(Command("tab", "t", "tablist"))(self.handler_get_2b2t_tablist)
@@ -124,6 +128,10 @@ class Stats2b2tBot:
                     [
                         KeyboardButton(text=await self.get_translation(user_id, "searchChat")),
                         KeyboardButton(text=await self.get_translation(user_id, "getSettings"))
+                    ],
+                    [
+                        KeyboardButton(text=await self.get_translation(user_id, "sendDonate"))
+
                     ]
                 ],
 
@@ -134,22 +142,28 @@ class Stats2b2tBot:
             return keyboard
     async def get_nav_chat_search(self, query_id, user_id=None):
         builder = InlineKeyboardBuilder()
-        q_data = self.api_2b2t.recent_querys[query_id]
+        q_data = await self.db.get_saved_state(query_id)
         if q_data['page'] > 1:
             builder.add(
                 InlineKeyboardButton(text="back page",
                                      callback_data=f"chat_search {query_id} goto {q_data['page'] - 1}"))
         else:
              builder.add(
-                    InlineKeyboardButton(text="back page",
+                    InlineKeyboardButton(text=" ",
                                          callback_data=f"chat_search none"))
         builder.add(
             InlineKeyboardButton(text=f"{q_data['page']} / {q_data['pages_count']}",
-                                 callback_data=f"none"))
-        builder.add(
-            InlineKeyboardButton(text="next page",
-                                 callback_data=f"chat_search {query_id} goto {q_data['page'] + 1}")
-        )
+                                 callback_data=f"chat_search {query_id} info"))
+        if q_data['page'] < q_data["pages_count"]:
+            builder.add(
+                InlineKeyboardButton(text="next page",
+                                     callback_data=f"chat_search {query_id} goto {q_data['page'] + 1}")
+            )
+        else:
+            builder.add(
+                InlineKeyboardButton(text=" ",
+                                     callback_data=f"chat_search none")
+            )
         builder.adjust(3)
         return builder.as_markup()
     def get_lang_keyboard(self, user_id):
@@ -161,27 +175,35 @@ class Stats2b2tBot:
         builder.adjust(2)
         return builder.as_markup()
 
-    async def on_msg(self, msg: types.Message) -> None:
-        user_id = msg.from_user.id
-        await self.write_msg(f"{await self.get_printable_user(msg.from_user, from_chat=msg.chat)}: {msg.text}")
+    async def on_event(self, event) -> None:
+        if type(event) == types.Message:
+            user_id = event.from_user.id
+            await self.write_msg(f"{await self.get_printable_user(event.from_user, from_chat=event.chat)}: {event.text}")
 
-        if SEND_LOGS:
-            await self.bot.send_message(LOGS_GROUP_ID,
-                                        f"{await self.get_printable_user(msg.from_user, from_chat=msg.chat, formatting=True)}:\n <code>{html.escape(msg.text)}</code>",
-                                        message_thread_id=LOGS_GROUP_THREAD_ID)
+            if SEND_LOGS:
+                await self.bot.send_message(LOGS_GROUP_ID,
+                                            f"{await self.get_printable_user(event.from_user, from_chat=event.chat, formatting=True)}:\n <code>{html.escape(event.text)}</code>",
+                                            message_thread_id=LOGS_GROUP_THREAD_ID)
 
 
-        if not await self.db.check_user_found(user_id):
-            await self.db.get_user(user_id)
-            await self.write_msg(f"{await self.get_printable_user(msg.from_user, from_chat=msg.chat)} new user!")
+            if not await self.db.check_user_found(user_id):
+                await self.db.get_user(user_id)
+                await self.write_msg(f"{await self.get_printable_user(event.from_user, from_chat=event.chat)} new user!")
 
-        if not await self.db.is_user_select_lang(msg.from_user.id):
-            await msg.reply(
-                "Select language\nВыбери язык\n",
-                reply_markup=self.get_lang_keyboard(msg.from_user.id)
-            )
+            if not await self.db.is_user_select_lang(event.from_user.id):
+                await event.reply(
+                    "Select language\nВыбери язык\n",
+                    reply_markup=self.get_lang_keyboard(event.from_user.id)
+                )
 
-        await self.db.increment_requests(user_id)
+            await self.db.increment_requests(user_id)
+        elif type(event) == CallbackQuery:
+            user_id = event.from_user.id
+            await self.write_msg(f"{await self.get_printable_user(event.from_user)} callback: {event.data}")
+            if SEND_LOGS:
+                await self.bot.send_message(LOGS_GROUP_ID,
+                                            f"{await self.get_printable_user(event.from_user, formatting=True)} callback:\n <code>{html.escape(event.data)}</code>",
+                                            message_thread_id=LOGS_GROUP_THREAD_ID)
 
     async def get_settings_keyboard(self, user_id):
         builder = InlineKeyboardBuilder()

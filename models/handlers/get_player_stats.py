@@ -6,7 +6,7 @@ import json
 
 async def handler_get_player_stats(self, message: types.Message, register_msg: bool = True) -> None:
     if register_msg:
-        await self.on_msg(message)
+        await self.on_event(message)
     if not await self.is_handler_msgs(message.from_user.id):
         return
 
@@ -14,20 +14,8 @@ async def handler_get_player_stats(self, message: types.Message, register_msg: b
     try:
         query = message.text.split(maxsplit=1)[1] if message.text.startswith("/") else message.text
     except IndexError as e:
-        user_configs = (await self.db.get_user_stats(message.from_user.id))["configs"]
-
-        user_configs["mode"] = "player_stats"
-        await self.db.update_configs(message.from_user.id, json.dumps(user_configs))
-        if message.chat.type == ChatType.PRIVATE:
-            await message.reply(await self.get_translation(message.from_user.id, "enterPlayer"))
-        else:
-            await message.reply(await self.get_translation(message.from_user.id, "enterPlayerInCommand"))
+        await message.reply(await self.get_translation(message.from_user.id, "playerStatsCommandUsage"))
         return
-    if not query:
-        user_configs = (await self.db.get_user_stats(message.from_user.id))["configs"]
-
-        user_configs["mode"] = "player_stats"
-        await self.db.update_configs(message.from_user.id, json.dumps(user_configs))
 
     if len(query.split()) > 1:
         await message.reply(await self.get_translation(message.from_user.id, "userError"))

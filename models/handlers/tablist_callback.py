@@ -2,7 +2,7 @@ from aiogram import types
 from models.utils import api
 
 
-async def handler_get_2b2t_info(self, message: types.Message, register_msg: bool = True) -> None:
+async def handler_tablist_callback(self, message: types.Message, register_msg: bool = True) -> None:
     if register_msg:
         await self.on_event(message)
     if not await self.is_handler_msgs(message.from_user.id):
