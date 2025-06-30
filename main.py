@@ -24,8 +24,11 @@ from models.handlers.search_chat import *
 from models.handlers.get_player_stats import *
 from models.handlers.get_2b2t_info import *
 from models.handlers.get_2b2t_tablist import *
-from models.handlers.tablist_callback import *
-from models.handlers.chat_search_callback import *
+from models.handlers.callback_tablist import *
+from models.handlers.callback_chat_search import *
+from models.handlers.callback_get_messages_from_player import *
+from models.handlers.search_messages_from_player import *
+from models.handlers.callback_tablist import *
 from models.handlers.text import *
 
 
@@ -45,6 +48,8 @@ class Stats2b2tBot:
     handler_help_message = handler_help_message
     handler_chat_search_callback = handler_chat_search_callback
     handler_tablist_callback = handler_tablist_callback
+    handler_search_messages_from_player = handler_search_messages_from_player
+    handler_search_messages_from_player_callback = handler_search_messages_from_player_callback
     async def get_translation(self, *kwargs):
         return await self.translator.get_translation(*kwargs)
 
@@ -83,11 +88,13 @@ class Stats2b2tBot:
         self.dp.message(Command("donate"))(self.handler_donate_message)
         self.dp.message(Command("messages", "m", "chat", "search", "s", "chat_search", "chats"))(self.handler_search_chat)
         self.dp.callback_query(F.data.startswith("settings"))(self.handler_callback_settings)
-        self.dp.callback_query(F.data.startswith("chat_search"))(self.handler_chat_search_callback)
+        self.dp.callback_query(F.data.startswith(CALLBACK_CHAT_SEARCH))(self.handler_chat_search_callback)
         self.dp.callback_query(F.data.startswith("tablist"))(self.handler_tablist_callback)
+        self.dp.callback_query(F.data.startswith(CALLBACK_MESSAGES_FROM_PLAYER))(self.handler_search_messages_from_player_callback)
         self.dp.message(Command("player", "pl", "p"))(self.handler_get_player_stats)
         self.dp.message(Command("i", "info", "stats", "stat"))(self.handler_get_2b2t_info)
         self.dp.message(Command("tab", "t", "tablist"))(self.handler_get_2b2t_tablist)
+        self.dp.message(Command("from"))(self.handler_search_messages_from_player)
         self.dp.message()(self.handler_text)
         self.dp.callback_query(F.data.startswith("setlang"))(self.handler_callback_set_language)
 
@@ -130,6 +137,7 @@ class Stats2b2tBot:
                         KeyboardButton(text=await self.get_translation(user_id, "getSettings"))
                     ],
                     [
+                        KeyboardButton(text=await self.get_translation(user_id, "getTablist")),
                         KeyboardButton(text=await self.get_translation(user_id, "sendDonate"))
 
                     ]
@@ -140,32 +148,128 @@ class Stats2b2tBot:
                 input_field_placeholder="Выберите действие..."  # подсказка в поле ввода
             )
             return keyboard
-    async def get_nav_chat_search(self, query_id, user_id=None):
+    async def get_markup_chat_search(self, query_id, user_id=None):
         builder = InlineKeyboardBuilder()
         q_data = await self.db.get_saved_state(query_id)
         if q_data['page'] > 1:
             builder.add(
-                InlineKeyboardButton(text="back page",
-                                     callback_data=f"chat_search {query_id} goto {q_data['page'] - 1}"))
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "startPage"),
+                                     callback_data=f"{CALLBACK_CHAT_SEARCH} {query_id} goto 1"))
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "backPage"),
+                                     callback_data=f"{CALLBACK_CHAT_SEARCH} {query_id} goto {q_data['page'] - 1}"))
         else:
-             builder.add(
+            for i in range(2):
+                builder.add(
                     InlineKeyboardButton(text=" ",
-                                         callback_data=f"chat_search none"))
+                                         callback_data=f"{CALLBACK_CHAT_SEARCH} none")
+                )
         builder.add(
             InlineKeyboardButton(text=f"{q_data['page']} / {q_data['pages_count']}",
-                                 callback_data=f"chat_search {query_id} info"))
+                                 callback_data=f"{CALLBACK_CHAT_SEARCH} {query_id} info"))
         if q_data['page'] < q_data["pages_count"]:
+
             builder.add(
-                InlineKeyboardButton(text="next page",
-                                     callback_data=f"chat_search {query_id} goto {q_data['page'] + 1}")
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "nextPage"),
+                                     callback_data=f"{CALLBACK_CHAT_SEARCH} {query_id} goto {q_data['page'] + 1}")
             )
+
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "endPage"),
+                                     callback_data=f"{CALLBACK_CHAT_SEARCH} {query_id} goto {q_data["pages_count"]}"))
         else:
-            builder.add(
-                InlineKeyboardButton(text=" ",
-                                     callback_data=f"chat_search none")
-            )
-        builder.adjust(3)
+            for i in range(2):
+                builder.add(
+                    InlineKeyboardButton(text=" ",
+                                         callback_data=f"{CALLBACK_CHAT_SEARCH} none")
+                )
+        builder.adjust(5)
         return builder.as_markup()
+
+    async def get_markup_search_messages_from_player(self, query_id):
+        builder = InlineKeyboardBuilder()
+        q_data = await self.db.get_saved_state(query_id)
+
+        if q_data['page'] > 1:
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "startPage"),
+                                     callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} goto 1"))
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "backPage"),
+                                     callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} goto {q_data['page'] - 1}"))
+        else:
+            for i in range(2):
+                builder.add(
+                    InlineKeyboardButton(text=" ",
+                                         callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} none")
+                )
+        builder.add(
+            InlineKeyboardButton(text=f"{q_data['page']} / {q_data['pages_count']}",
+                                 callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} info"))
+        if q_data['page'] < q_data["pages_count"]:
+
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "nextPage"),
+                                     callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} goto {q_data['page'] + 1}")
+            )
+
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "endPage"),
+                                     callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} goto {q_data["pages_count"]}"))
+        else:
+            for i in range(2):
+                builder.add(
+                    InlineKeyboardButton(text=" ",
+                                         callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} none")
+                )
+        builder.adjust(5)
+        return builder.as_markup()
+
+    async def get_markup_tablist(self, query_id):
+        builder = InlineKeyboardBuilder()
+        saved_state = await self.db.get_saved_state(query_id)
+        assert saved_state["type"] == "tablist"
+        user_id = str(saved_state["user_id"])
+        current_page = int(saved_state["page"])
+        page_size = int(saved_state["page_size"])
+        pages_count = await self.api_2b2t.get_2b2t_tablist_pages_count(page_size)
+
+
+        if current_page > 1:
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(user_id, "startPage"),
+                                     callback_data=f"{CALLBACK_TABLIST} {query_id} goto 1"))
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(user_id, "backPage"),
+                                     callback_data=f"{CALLBACK_TABLIST} {query_id} goto {current_page - 1}"))
+        else:
+            for i in range(2):
+                builder.add(
+                    InlineKeyboardButton(text=" ",
+                                         callback_data=f"{CALLBACK_TABLIST} none")
+                )
+        builder.add(
+            InlineKeyboardButton(text=f"{current_page} / {pages_count}",
+                                 callback_data=f"{CALLBACK_TABLIST} {query_id} info"))
+        if current_page < pages_count:
+
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(user_id, "nextPage"),
+                                     callback_data=f"{CALLBACK_TABLIST} {query_id} goto {current_page + 1}")
+            )
+
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(user_id, "endPage"),
+                                     callback_data=f"{CALLBACK_TABLIST} {query_id} goto {pages_count}"))
+        else:
+            for i in range(2):
+                builder.add(
+                    InlineKeyboardButton(text=" ",
+                                         callback_data=f"{CALLBACK_TABLIST} none")
+                )
+        builder.adjust(5)
+        return builder.as_markup()
+
     def get_lang_keyboard(self, user_id):
         builder = InlineKeyboardBuilder()
         builder.add(

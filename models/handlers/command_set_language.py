@@ -2,7 +2,6 @@ from aiogram import types
 
 
 async def handler_command_set_language(self, message: types.Message) -> None:
-    print(167)
     await self.on_event(message)
     if not await self.is_handler_msgs(message.from_user.id):
         return

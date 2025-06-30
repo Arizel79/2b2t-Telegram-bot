@@ -31,6 +31,9 @@ async def handler_text(self, message: types.Message) -> None:
             config_mode = "player_stats"
             await message.reply(await self.get_translation(message.from_user.id, "enterPlayer"))
 
+        elif message.text == await self.get_translation( message.from_user.id, "getTablist"):
+            await self.handler_get_2b2t_tablist(message, register_msg=False)
+
         elif message.text == await self.get_translation(message.from_user.id, "getSettings"):
             await self.handler_settings_message(message, register_msg=False)
             return

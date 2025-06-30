@@ -7,7 +7,7 @@ async def handler_callback_set_language(self, callback: CallbackQuery) -> None:
     try:
         # Проверка доступа
         if not callback.message.reply_to_message.from_user.id == callback.from_user.id:
-            await callback.answer("Access denied!", show_alert=True)
+            await callback.answer(await self.get_translation(callback.from_user.id, "accessDenied"), show_alert=True)
             return
 
         # Разбираем callback.data безопасно
