@@ -1,6 +1,6 @@
 # 2b2t Telegram bot
 Telegram bot for getting statistics about players of the 2b2t server
-The bot is available at the (link)[t.me/lolritterbot]
+The bot is available at the [link](t.me/lolritterbot)
 
 ## How to run
 1. Clone this repo
