@@ -13,9 +13,9 @@ from models.utils.config import *
 
 
 class Api2b2t:
-    GET_2B2T_INFO_CACHE_TIME = 30  # sec
-    GET_2B2T_TABLIST_CACHE_TIME = 20  # sec
-    GET_2B2T_PLAYTIME_TOP = 10  # sec
+    GET_2B2T_INFO_CACHE_TIME = 60  # sec
+    GET_2B2T_TABLIST_CACHE_TIME = 60  # sec
+    GET_2B2T_PLAYTIME_TOP = 60 * 30  # sec
     GET_2B2T_KILLS_TOP = 10  # sec
     GET_2B2T_DEATHS_TOP = 10  # sec
 
@@ -62,8 +62,25 @@ class Api2b2t:
         tablist["players"] = tablist["players"][start:end]
         return tablist
 
-    async def get_2b2t_tablist_pages_count(self, page_size=20) -> int:
+    async def get_playtime_top_page(self, page=1, page_size=20):
+        start = (page - 1) * page_size
+        end = start + page_size
+
+
+        playtime_top = dict(await self.get_playtime_top())
+        playtime_top["players"] = playtime_top["players"][start:end]
+        return playtime_top
+
+
+    async def get_2b2t_tablist_pages_count(self, page_size=TABLIST_PAGE_SIZE) -> int:
         n = (await self.get_2b2t_tablist())["count"] / page_size
+        if n == int(n):
+            return int (n) - 1
+        else:
+            return int(n)
+
+    async def get_playtime_top_pages_count(self, page_size=PLAYTIME_TOP_PAGE_SIZE) -> int:
+        n = len((await self.get_playtime_top())["players"]) / page_size
         if n == int(n):
             return int (n) - 1
         else:
@@ -146,7 +163,7 @@ class Api2b2t:
 
                                                )
         return text
-    async def get_2b2t_playtime_top(self):
+    async def get_playtime_top(self):
         if time.time() > self.old_time_get_2b2t_playtime_top + self.GET_2B2T_PLAYTIME_TOP:
             try:
                 async with aiohttp.ClientSession() as session:
@@ -161,7 +178,26 @@ class Api2b2t:
             except Exception as e:
                 raise self.Api2b2tError(f"{type(e).__name__}: {e}")
         else:
-            return self.cached_2b2t_info
+            return self.cached_2b2t_playtime_top
+
+    async def get_printable_playtime_top(self, query_id):
+
+        saved_state = await self.bot.db.get_saved_state(query_id)
+        assert saved_state["type"] == "playtime_top"
+        user_id = str(saved_state["user_id"])
+        page = int(saved_state["page"])
+        page_size = int(saved_state["page_size"])
+        pages_count = await self.get_2b2t_tablist_pages_count()
+
+        out = await self.bot.get_translation(user_id, "playtimeTopHeader") + "\n"
+        pttop = playtime_top = await self.get_playtime_top_page(page, page_size)
+
+
+        for n, i in enumerate(playtime_top["players"]):
+            n_in_top = page * page_size + n
+            out += f"{n_in_top}. <code>{await self.seconds_to_hms(i["playtimeSeconds"], user_id)}</code> - <code>{i["playerName"]}</code>\n"
+        return out
+
     async def get_player_stats(self, player: str = None, uuid: str = None) -> Dict[str, Any] or None:
         assert (not player is None) or (not uuid is None)
 
@@ -342,7 +378,6 @@ class Api2b2t:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
 
     async def get_printable_messages_from_player_in_2b2t_chat(self, query_id):
-        print("d9uj3h3")
         try:
             saved_state = await self.bot.db.get_saved_state(query_id)
             current_page = saved_state["page"]
@@ -433,7 +468,8 @@ async def main():
     # pprint(await api.get_2b2t_info())
     # pprint(await api.get_2b2t_tablist_pages_count(20))
 
-    print(await api.get_2b2t_playtime_top())
+    print(await api.get_playtime_top_page())
+
 
     #print(await api.get_2b2t_tablist_page(1, 3))
     #print(await api.get_2b2t_tablist_page(2, 3))

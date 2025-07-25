@@ -10,7 +10,7 @@ async def handler_chat_search_callback(self, callback: CallbackQuery) -> None:
         spl = callback.data.split()
         assert spl[0] == CALLBACK_CHAT_SEARCH
         if spl[1] == "none":
-            await callback.answer("Тут ничего нет", show_alert=True)
+            await callback.answer(await self.get_translation(callback.from_user.id, "nothingHere"), show_alert=True)
 
         try:
             query_id = int(spl[1])

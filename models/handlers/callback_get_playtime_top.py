@@ -4,12 +4,12 @@ from aiogram.exceptions import TelegramForbiddenError
 from models.utils.config import *
 
 
-async def handler_tablist_callback(self, callback: CallbackQuery) -> None:
+async def handler_playtime_top_callback(self, callback: CallbackQuery) -> None:
     await self.on_event(callback)
 
     try:
         spl = callback.data.split()
-        assert spl[0] == CALLBACK_TABLIST
+        assert spl[0] == CALLBACK_PLAYTIME_TOP
         if spl[1] == "none":
             await callback.answer(await self.get_translation(callback.from_user.id, "nothingHere"), show_alert=True)
 
@@ -35,9 +35,9 @@ async def handler_tablist_callback(self, callback: CallbackQuery) -> None:
                 f"{callback.message.html_text}\n\n{await self.get_translation(callback.from_user.id, 'waitPlease')}")  # await self.get_translation(callback.message.from_user.id, "waitPlease")
 
             try:
-                answer = await self.api_2b2t.get_printable_2b2t_tablist_page(query_id)
+                answer = await self.api_2b2t.get_printable_playtime_top(query_id)
 
-                await callback.message.edit_text(answer, reply_markup=await self.get_markup_tablist(query_id))
+                await callback.message.edit_text(answer, reply_markup=await self.get_nav_markup(query_id))
             except self.api_2b2t.Api2b2tError as e:
                 self.logger.error(f"Api2b2tError: {e}")
                 await callback.message.reply(await self.get_translation(callback.from_user.id, "error"))
@@ -48,7 +48,7 @@ async def handler_tablist_callback(self, callback: CallbackQuery) -> None:
                 pass
 
         elif spl[2] == "info":
-            pages_count = await self.api_2b2t.get_2b2t_tablist_pages_count(q_data["page_size"])
+            pages_count = await self.api_2b2t.get_playtime_top_pages_count(q_data["page_size"])
             await callback.answer(f"Page: {q_data['page']} / {pages_count}",
                                   show_alert=True)
 

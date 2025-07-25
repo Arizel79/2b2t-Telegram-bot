@@ -14,7 +14,7 @@ async def handler_search_messages_from_player_callback(self, callback: CallbackQ
         spl = callback.data.split()
         assert spl[0] == CALLBACK_MESSAGES_FROM_PLAYER
         if spl[1] == "none":
-            await callback.answer("Тут ничего нет", show_alert=True)
+            await callback.answer(await self.get_translation(callback.from_user.id, "nothingHere"), show_alert=True)
 
         try:
             query_id = int(spl[1])
@@ -46,7 +46,7 @@ async def handler_search_messages_from_player_callback(self, callback: CallbackQ
         elif spl[2] == "info":
             await callback.answer(f"Page: {q_data['page']} / {q_data['pages_count']}\nTotal: {q_data['total']}", show_alert=True)
 
-        elif spl[2] == VIEW_PLAYER_STATS:
+        elif spl[2] == CALLBAK_VIEW_PLAYER_STATS:
             try:
                 if not q_data["user_id"] == callback.from_user.id:
                     await callback.answer(await self.get_translation(callback.from_user.id, "accessDenied"), show_alert=True)

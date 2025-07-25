@@ -20,7 +20,6 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
         lst = message.text.split()
         if len(lst) > 1:
             query = " ".join(lst[1:])
-            print("q: ", query)
         else:
             await message.reply(await self.get_translation(message.from_user.id, "searchMessagesFromPlayerCommandUsage"))
             return
@@ -37,10 +36,8 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
     elif is_valid_minecraft_uuid(query):
         saved_state["player_uuid"] = query
     else:
-        print("312jsadyyt6")
         await message.reply(await self.get_translation(message.from_user.id, "userError"))
         return
-    print(saved_state)
     query_id = await self.db.add_saved_state(saved_state)
 
     msg_my = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"))

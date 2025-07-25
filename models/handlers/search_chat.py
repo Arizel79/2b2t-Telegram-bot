@@ -19,7 +19,6 @@ async def handler_search_chat(self, message: types.Message, register_msg: bool =
         lst = message.text.split()
         if len(lst) > 1:
             query = " ".join(lst[1:])
-            print("q: ", query)
         else:
             await message.reply(await self.get_translation(message.from_user.id, "searchCommandUsage"))
             return
@@ -29,7 +28,7 @@ async def handler_search_chat(self, message: types.Message, register_msg: bool =
     user_configs = (await self.db.get_user_stats(message.from_user.id))["configs"]
 
     await self.db.update_configs(message.from_user.id, json.dumps(user_configs))
-    query_id = await self.db.add_saved_state({"type": "search chat", "word": query, "page": 1,
+    query_id = await self.db.add_saved_state({"type": "search_chat", "word": query, "page": 1,
                                              "user_id": message.from_user.id, "page_size": SEARCH_PAGE_SIZE})
 
     msg_my = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"))

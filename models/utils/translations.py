@@ -28,7 +28,6 @@ class Translator:
             return self.translations[lang][what].format(*format_args)
         except KeyError:
             error = f"Error.\n\n KeyError(translation NOT FOUND) lang={lang}, what={what} !!!"
-            print(error)
             return error
         except IndexError:
             error = f"Error.\n\n IndexError(translation format_args not correct N) lang={lang}, what={what}, format_args={format_args} !!!"
