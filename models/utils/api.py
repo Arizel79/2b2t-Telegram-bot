@@ -195,7 +195,7 @@ class Api2b2t:
 
         for n, i in enumerate(playtime_top["players"]):
             n_in_top = page * page_size + n
-            out += f"{n_in_top}. <code>{await self.seconds_to_hms(i['playtimeSeconds'], user_id)}</code> - <code>{i["playerName"]}</code>\n"
+            out += f"{n_in_top}. <code>{await self.seconds_to_hms(i['playtimeSeconds'], user_id)}</code> - <code>{i['playerName']}</code>\n"
         return out
 
     async def get_player_stats(self, player: str = None, uuid: str = None) -> Dict[str, Any] or None:
