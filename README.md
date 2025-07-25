@@ -1,5 +1,5 @@
 # 2b2t Telegram bot
-Telegram bot for getting statistics about players of the 2b2t server
+Telegram bot for getting statistics about 2b2t.org server.
 The bot is available at the [link](https://t.me/lolritterbot)
 
 ## How to run
