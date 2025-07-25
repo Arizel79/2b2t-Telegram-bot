@@ -1,7 +1,9 @@
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message, DateTime, Chat
 from aiogram.utils.markdown import html_decoration as hd
 from aiogram.exceptions import TelegramForbiddenError
 from models.utils.config import *
+
+
 
 
 async def handler_search_messages_from_player_callback(self, callback: CallbackQuery) -> None:
@@ -44,7 +46,22 @@ async def handler_search_messages_from_player_callback(self, callback: CallbackQ
         elif spl[2] == "info":
             await callback.answer(f"Page: {q_data['page']} / {q_data['pages_count']}\nTotal: {q_data['total']}", show_alert=True)
 
+        elif spl[2] == VIEW_PLAYER_STATS:
+            try:
+                if not q_data["user_id"] == callback.from_user.id:
+                    await callback.answer(await self.get_translation(callback.from_user.id, "accessDenied"), show_alert=True)
+                    return
+                await callback.message.edit_text(
+                    f"{callback.message.html_text}\n\n{await self.get_translation(callback.from_user.id, 'waitPlease')}")
+                await callback.message.edit_text(await self.get_player_stats_answer(q_data.get("player_name", q_data.get("player_uuid", "invalid_ay6y1381")),callback.from_user.id),
+                                                 reply_markup=await self.get_player_stats_keyboard(callback.from_user.id, query_id))
+            except self.api_2b2t.Api2b2tError as e:
+                self.logger.error(e)
+                await callback.message.edit_text(await self.get_translation(callback.message.from_user.id, "userError"))
 
+            except Exception as e:
+                self.logger.error(e)
+                await callback.message.edit_text(await self.get_translation(callback.message.from_user.id, "error"))
 
     finally:
         pass

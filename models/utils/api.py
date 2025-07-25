@@ -15,15 +15,27 @@ from models.utils.config import *
 class Api2b2t:
     GET_2B2T_INFO_CACHE_TIME = 30  # sec
     GET_2B2T_TABLIST_CACHE_TIME = 20  # sec
+    GET_2B2T_PLAYTIME_TOP = 10  # sec
+    GET_2B2T_KILLS_TOP = 10  # sec
+    GET_2B2T_DEATHS_TOP = 10  # sec
 
     def __init__(self, bot=None):
         self.bot = bot
+
+        # CACHE
         self.old_time_get_2b2t_info = 0
-        self.old_time_get_2b2t_tablist = 0
         self.cached_2b2t_info = None
+
+        self.old_time_get_2b2t_tablist = 0
         self.cached_2b2t_tablist = None
 
+        self.old_time_get_2b2t_playtime_top = 0
+        self.cached_2b2t_playtime_top = None
+
     class Api2b2tError(Exception):
+        pass
+
+    class PlayerNeverWasOn2b2tError(Exception):
         pass
 
     async def get_2b2t_tablist(self):
@@ -87,9 +99,17 @@ class Api2b2t:
                         data = await response.json()
 
                 async with aiohttp.ClientSession() as session:
+                    async with session.get("https://api.2b2t.vc/queue/eta-equation") as response:
+                        data.update(await response.json())
+
+                async with aiohttp.ClientSession() as session:
                     async with session.get("https://api.mcsrvstat.us/3/2b2t.org") as response:
                         online = (await response.json())["players"]["online"]
                 data["online"] = online
+
+                # https://api.2b2t.vc/queue/eta-equation
+
+                data["regular_eta_sec"] = data["factor"] * (data["regular"] ** data["pow"])
 
                 self.cached_2b2t_info = data
                 self.old_time_get_2b2t_info = time.time()
@@ -121,10 +141,27 @@ class Api2b2t:
                                                tl['nonPrioCount'],
                                                int(tl['nonPrioCount'] / tl['count'] * 100),
                                                info["regular"],
-                                               info["prio"]
+                                               info["prio"],
+                                               await self.seconds_to_hms(info["regular_eta_sec"], user_id),
+
                                                )
         return text
+    async def get_2b2t_playtime_top(self):
+        if time.time() > self.old_time_get_2b2t_playtime_top + self.GET_2B2T_PLAYTIME_TOP:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get("https://api.2b2t.vc/playtime/top") as response:
+                        data = await response.json()
 
+
+                self.cached_2b2t_playtime_top = data
+                self.old_time_get_2b2t_playtime_top = time.time()
+
+                return data
+            except Exception as e:
+                raise self.Api2b2tError(f"{type(e).__name__}: {e}")
+        else:
+            return self.cached_2b2t_info
     async def get_player_stats(self, player: str = None, uuid: str = None) -> Dict[str, Any] or None:
         assert (not player is None) or (not uuid is None)
 
@@ -149,16 +186,22 @@ class Api2b2t:
                     result.update(await response.json())
 
                     return result
+        except aiohttp.client_exceptions.ContentTypeError as e:
+            raise self.PlayerNeverWasOn2b2tError
         except Exception as e:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
 
     async def get_printaleble_player_stats(self, user_id, player=None, uuid=None):
         is_player_online = False
         tablist = await self.get_2b2t_tablist()
-
+        use_uuid = False
         if player is not None:
+
+            view_player = player
             is_player_online = any(p["playerName"].lower() == player.lower() for p in tablist["players"])
         elif uuid is not None:
+            use_uuid = True
+            view_player = uuid
             is_player_online = any(p["uuid"] == uuid for p in tablist["players"])
 
         data = await self.get_player_stats(player, uuid)
@@ -167,7 +210,7 @@ class Api2b2t:
         if not data.get("firstSeen", False):
             return await self.bot.get_translation(user_id, "playerWasNotOn2b2t", player, player)
         text = await self.bot.get_translation(user_id, "playerStats",
-                                              player, online, self.format_iso_time(data['firstSeen']),
+                                              view_player, online, self.format_iso_time(data['firstSeen']),
                                               self.format_iso_time(data['lastSeen']), data['chatsCount'],
                                               data['deathCount'],
                                               data['killCount'],
@@ -220,7 +263,7 @@ class Api2b2t:
             raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
 
     async def get_messages_from_player_in_2b2t_chat(self, player_name: str = None, uuid=None, page: int = 1,
-                                                    page_size=10, sort=None):
+                                                    page_size=10, sort=None, check_player_was_on_2b2t=False):
         '''
         :return {
         "chats": [
@@ -233,6 +276,7 @@ class Api2b2t:
         "pageCount": 0
         }
         '''
+
         try:
             url = "https://api.2b2t.vc/chats"
             params = {"page": page, "pageSize": page_size}
@@ -248,10 +292,12 @@ class Api2b2t:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as resp:
                     if resp.status == 204:
-                        return {"chats": [], "total": 0, "pageCount": 0}
+                        raise self.PlayerNeverWasOn2b2tError
+                        #return {"chats": [], "total": 0, "pageCount": 0}
                     data = await resp.json()
                     return data
-
+        except self.PlayerNeverWasOn2b2tError:
+            raise self.PlayerNeverWasOn2b2tError
         except Exception as e:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
 
@@ -296,13 +342,14 @@ class Api2b2t:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
 
     async def get_printable_messages_from_player_in_2b2t_chat(self, query_id):
+        print("d9uj3h3")
         try:
             saved_state = await self.bot.db.get_saved_state(query_id)
             current_page = saved_state["page"]
             page_size = saved_state["page_size"]
 
             player_name = saved_state.get("player_name", None)
-            uuid = saved_state.get("uuid", None)
+            uuid = saved_state.get("player_uuid", None)
 
             if not uuid is None:
                 use_uuid = True
@@ -311,12 +358,15 @@ class Api2b2t:
                 use_uuid = False
                 player = player_name
                 assert not player_name is None
+
             if use_uuid:
                 data = await self.get_messages_from_player_in_2b2t_chat(uuid=uuid, page=current_page,
                                                                         page_size=page_size)
             else:
                 data = await self.get_messages_from_player_in_2b2t_chat(player_name=player_name, page=current_page,
                                                                         page_size=page_size)
+
+
             pages_count = saved_state["pages_count"] = int(data["pageCount"])
             total = saved_state["total"] = int(data["total"])
             out = await self.bot.get_translation(saved_state["user_id"], "outputSearchMessagesFromPlayerHeader",
@@ -330,7 +380,10 @@ class Api2b2t:
                 out += self.format_chat_message(i)
 
             await self.bot.db.update_saved_state(query_id, saved_state)
+
             return out
+        except self.PlayerNeverWasOn2b2tError:
+            raise self.PlayerNeverWasOn2b2tError
         except Exception as e:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
 
@@ -343,9 +396,9 @@ class Api2b2t:
         """
 
         days = seconds // 86400
-        hours = (seconds % 86400) // 3600
-        minutes = (seconds % 3600) // 60
-        seconds = seconds % 60
+        hours = int((seconds % 86400) // 3600)
+        minutes = int((seconds % 3600) // 60)
+        seconds = int(seconds % 60)
         days_word = await self.bot.get_translation(user_id, "days")
         time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         if days > 0:
@@ -380,8 +433,10 @@ async def main():
     # pprint(await api.get_2b2t_info())
     # pprint(await api.get_2b2t_tablist_pages_count(20))
 
-    print(await api.get_2b2t_tablist_page(1, 3))
-    print(await api.get_2b2t_tablist_page(2, 3))
+    print(await api.get_2b2t_playtime_top())
+
+    #print(await api.get_2b2t_tablist_page(1, 3))
+    #print(await api.get_2b2t_tablist_page(2, 3))
 
 
 

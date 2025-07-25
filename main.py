@@ -32,7 +32,6 @@ from models.handlers.callback_tablist import *
 from models.handlers.text import *
 
 
-
 class Stats2b2tBot:
     handler_start_message = handler_start_message
     handler_callback_settings = handler_callback_settings
@@ -50,6 +49,7 @@ class Stats2b2tBot:
     handler_tablist_callback = handler_tablist_callback
     handler_search_messages_from_player = handler_search_messages_from_player
     handler_search_messages_from_player_callback = handler_search_messages_from_player_callback
+
     async def get_translation(self, *kwargs):
         return await self.translator.get_translation(*kwargs)
 
@@ -69,7 +69,6 @@ class Stats2b2tBot:
 
         self.logger.info("Program started")
 
-
     async def initialize(self):
         await self.db.create_all()
         await self._register_handlers()
@@ -86,11 +85,13 @@ class Stats2b2tBot:
         self.dp.message(Command("settings"))(self.handler_settings_message)
         self.dp.message(Command("help", "h"))(self.handler_help_message)
         self.dp.message(Command("donate"))(self.handler_donate_message)
-        self.dp.message(Command("messages", "m", "chat", "search", "s", "chat_search", "chats"))(self.handler_search_chat)
+        self.dp.message(Command("messages", "m", "chat", "search", "s", "chat_search", "chats"))(
+            self.handler_search_chat)
         self.dp.callback_query(F.data.startswith("settings"))(self.handler_callback_settings)
         self.dp.callback_query(F.data.startswith(CALLBACK_CHAT_SEARCH))(self.handler_chat_search_callback)
         self.dp.callback_query(F.data.startswith("tablist"))(self.handler_tablist_callback)
-        self.dp.callback_query(F.data.startswith(CALLBACK_MESSAGES_FROM_PLAYER))(self.handler_search_messages_from_player_callback)
+        self.dp.callback_query(F.data.startswith(CALLBACK_MESSAGES_FROM_PLAYER))(
+            self.handler_search_messages_from_player_callback)
         self.dp.message(Command("player", "pl", "p"))(self.handler_get_player_stats)
         self.dp.message(Command("i", "info", "stats", "stat"))(self.handler_get_2b2t_info)
         self.dp.message(Command("tab", "t", "tablist"))(self.handler_get_2b2t_tablist)
@@ -148,6 +149,7 @@ class Stats2b2tBot:
                 input_field_placeholder="Выберите действие..."  # подсказка в поле ввода
             )
             return keyboard
+
     async def get_markup_chat_search(self, query_id, user_id=None):
         builder = InlineKeyboardBuilder()
         q_data = await self.db.get_saved_state(query_id)
@@ -176,7 +178,7 @@ class Stats2b2tBot:
 
             builder.add(
                 InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "endPage"),
-                                     callback_data=f"{CALLBACK_CHAT_SEARCH} {query_id} goto {q_data["pages_count"]}"))
+                                     callback_data=f"{CALLBACK_CHAT_SEARCH} {query_id} goto {q_data['pages_count']}"))
         else:
             for i in range(2):
                 builder.add(
@@ -215,13 +217,18 @@ class Stats2b2tBot:
 
             builder.add(
                 InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "endPage"),
-                                     callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} goto {q_data["pages_count"]}"))
+                                     callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} goto {q_data['pages_count']}"))
         else:
             for i in range(2):
                 builder.add(
                     InlineKeyboardButton(text=" ",
                                          callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} none")
                 )
+        if q_data.get("via_player_stats", False):
+            builder.add(
+                InlineKeyboardButton(text=await self.get_translation(q_data["user_id"], "menuBack"),
+                                     callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} {VIEW_PLAYER_STATS}")
+            )
         builder.adjust(5)
         return builder.as_markup()
 
@@ -233,7 +240,6 @@ class Stats2b2tBot:
         current_page = int(saved_state["page"])
         page_size = int(saved_state["page_size"])
         pages_count = await self.api_2b2t.get_2b2t_tablist_pages_count(page_size)
-
 
         if current_page > 1:
             builder.add(
@@ -270,6 +276,37 @@ class Stats2b2tBot:
         builder.adjust(5)
         return builder.as_markup()
 
+    async def get_player_stats_answer(self, query, user_id, register_query_id=False):
+        if is_valid_minecraft_uuid(query):
+            answer = await self.api_2b2t.get_printaleble_player_stats(user_id, uuid=query)
+            if register_query_id:
+                saved_state = {"type": "msgs from player", "player_uuid": query, "page": 1,
+                               "user_id": user_id, "page_size": SEARCH_FROM_PLAYER_PAGE_SIZE,
+                               "via_player_stats": True}
+                query_id = await self.db.add_saved_state(saved_state)
+                return (answer, query_id)
+            return answer
+
+        elif is_valid_minecraft_username(query):
+            answer = await self.api_2b2t.get_printaleble_player_stats(user_id, player=query)
+            if register_query_id:
+                saved_state = {"type": "msgs from player", "player_name": query, "page": 1,
+                               "user_id": user_id, "page_size": SEARCH_FROM_PLAYER_PAGE_SIZE,
+                               "via_player_stats": True}
+                query_id = await self.db.add_saved_state(saved_state)
+                return (answer, query_id)
+            return answer
+        else:
+            raise self.api_2b2t.Api2b2tError("not a name/uuid")
+
+
+    async def get_player_stats_keyboard(self, user_id, query_id):
+        builder = InlineKeyboardBuilder()
+        builder.add(
+            InlineKeyboardButton(text=await self.get_translation(user_id, "getPlayerChatMessagesViaPlayerStats"),
+                                 callback_data=f"{CALLBACK_MESSAGES_FROM_PLAYER} {query_id} goto 1"))
+        return builder.as_markup()
+
     def get_lang_keyboard(self, user_id):
         builder = InlineKeyboardBuilder()
         builder.add(
@@ -282,17 +319,18 @@ class Stats2b2tBot:
     async def on_event(self, event) -> None:
         if type(event) == types.Message:
             user_id = event.from_user.id
-            await self.write_msg(f"{await self.get_printable_user(event.from_user, from_chat=event.chat)}: {event.text}")
+            await self.write_msg(
+                f"{await self.get_printable_user(event.from_user, from_chat=event.chat)}: {event.text}")
 
             if SEND_LOGS:
                 await self.bot.send_message(LOGS_GROUP_ID,
                                             f"{await self.get_printable_user(event.from_user, from_chat=event.chat, formatting=True)}:\n <code>{html.escape(event.text)}</code>",
                                             message_thread_id=LOGS_GROUP_THREAD_ID)
 
-
             if not await self.db.check_user_found(user_id):
                 await self.db.get_user(user_id)
-                await self.write_msg(f"{await self.get_printable_user(event.from_user, from_chat=event.chat)} new user!")
+                await self.write_msg(
+                    f"{await self.get_printable_user(event.from_user, from_chat=event.chat)} new user!")
 
             if not await self.db.is_user_select_lang(event.from_user.id):
                 await event.reply(
@@ -326,7 +364,6 @@ class Stats2b2tBot:
 
     async def run(self) -> None:
         await self.dp.start_polling(self.bot)
-
 
 
 async def main():

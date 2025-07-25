@@ -16,3 +16,5 @@ def is_valid_minecraft_username(username):
         return False
 
     return True
+def get_namemc_profile(player):
+    return f"https://namemc.com/{player}"

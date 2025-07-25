@@ -3,6 +3,7 @@ import logging
 from aiogram import types
 import json
 from random import randint
+from models.utils.utils import *
 from models.utils.config import *
 
 
@@ -29,8 +30,16 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
     user_configs = (await self.db.get_user_stats(message.from_user.id))["configs"]
 
     await self.db.update_configs(message.from_user.id, json.dumps(user_configs))
-    saved_state = {"type": "msgs from player", "player_name": query, "page": 1,
+    saved_state = {"type": "msgs from player", "page": 1,
                                              "user_id": message.from_user.id, "page_size":SEARCH_FROM_PLAYER_PAGE_SIZE}
+    if is_valid_minecraft_username(query):
+        saved_state["player_name"] = query
+    elif is_valid_minecraft_uuid(query):
+        saved_state["player_uuid"] = query
+    else:
+        print("312jsadyyt6")
+        await message.reply(await self.get_translation(message.from_user.id, "userError"))
+        return
     print(saved_state)
     query_id = await self.db.add_saved_state(saved_state)
 
@@ -38,11 +47,15 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
     try:
         answer = await self.api_2b2t.get_printable_messages_from_player_in_2b2t_chat(query_id)
         await msg_my.edit_text(answer, reply_markup=await self.get_markup_search_messages_from_player(query_id))
+
+    except self.api_2b2t.PlayerNeverWasOn2b2tError as e:
+
+        await msg_my.edit_text(await self.get_translation(message.from_user.id, "playerWasNotOn2b2t", query))
     except self.api_2b2t.Api2b2tError as e:
         logging.error(f"Api2b2tError: {e}")
-        await message.reply(await self.get_translation(message.from_user.id, "error"))
-    except Exception as e:
-        logging.error(f"{type(e).__name__}: {e}")
-        await message.reply(await self.get_translation(message.from_user.id, "error") + f"\n\n<code>{type(e).__name__}: {html.escape(str(e))}</code>")
+        await msg_my.edit_text(await self.get_translation(message.from_user.id, "userError"))
+    # except Exception as e:
+    #     logging.error(f"{type(e).__name__}: {e}")
+    #     await message.reply(await self.get_translation(message.from_user.id, "error") + f"\n\n<code>{type(e).__name__}: {html.escape(str(e))}</code>")
     finally:
         pass

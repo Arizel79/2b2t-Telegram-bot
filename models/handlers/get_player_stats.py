@@ -1,7 +1,11 @@
 from aiogram.enums import ChatType
 from aiogram import types
+from aiogram.types import InlineKeyboardButton, CallbackQuery
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from models.utils.utils import is_valid_minecraft_username, is_valid_minecraft_uuid
 import json
+from models.utils.config import *
+
 
 
 async def handler_get_player_stats(self, message: types.Message, register_msg: bool = True) -> None:
@@ -9,6 +13,8 @@ async def handler_get_player_stats(self, message: types.Message, register_msg: b
         await self.on_event(message)
     if not await self.is_handler_msgs(message.from_user.id):
         return
+
+
 
     lang = (await self.db.get_user_stats(message.from_user.id))["lang"]
     try:
@@ -24,14 +30,14 @@ async def handler_get_player_stats(self, message: types.Message, register_msg: b
     msg = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"))
 
     try:
-        if is_valid_minecraft_uuid(query):
-            answer = await self.api_2b2t.get_printaleble_player_stats(message.from_user.id, uuid=query)
-        elif is_valid_minecraft_username(query):
-            answer = await self.api_2b2t.get_printaleble_player_stats(message.from_user.id, player=query)
+        answer_ = await self.get_player_stats_answer(query, message.from_user.id, register_query_id=True)
+        if len(answer_) == 2:
+            answer, query_id = answer_
+            await msg.edit_text(answer,
+                                reply_markup=await self.get_player_stats_keyboard(message.from_user.id, query_id))
         else:
-            await msg.edit_text(await self.get_translation(message.from_user.id, "userError"))
             return
-        await msg.edit_text(answer)
+
     except self.api_2b2t.Api2b2tError as e:
         self.logger.error(e)
         await msg.edit_text(await self.get_translation(message.from_user.id, "userError"))
