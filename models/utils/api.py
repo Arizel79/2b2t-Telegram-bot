@@ -3,13 +3,18 @@ import html
 import json
 import time
 from pprint import pprint
+from urllib.parse import urlencode, quote
 from aiogram.types.inline_keyboard_button import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 import aiohttp
 from models.utils.config import *
+
+import asyncio
+from typing import Callable, Awaitable
+import json
 
 
 class Api2b2t:
@@ -32,10 +37,15 @@ class Api2b2t:
         self.old_time_get_2b2t_playtime_top = 0
         self.cached_2b2t_playtime_top = None
 
+        self.last_time_get_2b2t_chat_history = datetime.now(tz=timezone.utc)
+
     class Api2b2tError(Exception):
         pass
 
     class PlayerNeverWasOn2b2tError(Exception):
+        pass
+
+    class SSEError(Exception):
         pass
 
     async def get_2b2t_tablist(self):
@@ -57,7 +67,6 @@ class Api2b2t:
         start = (page - 1) * page_size
         end = start + page_size
 
-
         tablist = dict(await self.get_2b2t_tablist())
         tablist["players"] = tablist["players"][start:end]
         return tablist
@@ -66,23 +75,21 @@ class Api2b2t:
         start = (page - 1) * page_size
         end = start + page_size
 
-
         playtime_top = dict(await self.get_playtime_top())
         playtime_top["players"] = playtime_top["players"][start:end]
         return playtime_top
 
-
     async def get_2b2t_tablist_pages_count(self, page_size=TABLIST_PAGE_SIZE) -> int:
         n = (await self.get_2b2t_tablist())["count"] / page_size
         if n == int(n):
-            return int (n) - 1
+            return int(n) - 1
         else:
             return int(n)
 
     async def get_playtime_top_pages_count(self, page_size=PLAYTIME_TOP_PAGE_SIZE) -> int:
         n = len((await self.get_playtime_top())["players"]) / page_size
         if n == int(n):
-            return int (n) - 1
+            return int(n) - 1
         else:
             return int(n)
 
@@ -163,13 +170,13 @@ class Api2b2t:
 
                                                )
         return text
+
     async def get_playtime_top(self):
         if time.time() > self.old_time_get_2b2t_playtime_top + self.GET_2B2T_PLAYTIME_TOP:
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.get("https://api.2b2t.vc/playtime/top") as response:
                         data = await response.json()
-
 
                 self.cached_2b2t_playtime_top = data
                 self.old_time_get_2b2t_playtime_top = time.time()
@@ -191,7 +198,6 @@ class Api2b2t:
 
         out = await self.bot.get_translation(user_id, "playtimeTopHeader") + "\n"
         pttop = playtime_top = await self.get_playtime_top_page(page, page_size)
-
 
         for n, i in enumerate(playtime_top["players"]):
             n_in_top = page * page_size + n
@@ -256,6 +262,47 @@ class Api2b2t:
                                               await self.bot.get_translation(user_id, "prioActive") if data[
                                                   'prio'] else '')
         return text
+
+    async def get_2b2t_chat_history(
+            self,
+            start_date: datetime,
+            end_date: datetime,
+            page: int = 1,
+            page_size=CHAT_HISTORY_PAGE_SIZE,
+            sort=None,
+    ):
+        '''
+dt = datetime.now(tz=timezone.utc)
+formatted_str = dt.isoformat(timespec='milliseconds')  # Форматирование в строку
+print(formatted_str)  # 2022-10-31T01:30:00.000'''
+        try:
+            base_url = "https://api.2b2t.vc/chats/window"
+            params = {"startDate": start_date.isoformat(timespec='milliseconds'),
+                      "endDate": end_date.isoformat(timespec='milliseconds'), "page": page, "pageSize": page_size}
+
+            if sort is not None:
+                assert sort in ["asc", "desc"]
+                params["sort"] = sort
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(base_url, params=params) as resp:
+                    print("URL:", resp.url)
+                    data = await resp.json()
+                    return data
+
+        except Exception as e:
+            raise self.Api2b2tError(f"{type(e).__name__}: {e}")
+
+        except requests.exceptions.JSONDecodeError:
+            raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
+
+    async def get_new_2b2t_chat_messages(self):
+        now = datetime.now(tz=timezone.utc)
+        data = await self.get_2b2t_chat_history(self.last_time_get_2b2t_chat_history, now)
+
+        self.last_time_get_2b2t_chat_history = now
+
+        return data
 
     async def get_2b2t_chat_search_page(
             self,
@@ -329,7 +376,7 @@ class Api2b2t:
                 async with session.get(url, params=params) as resp:
                     if resp.status == 204:
                         raise self.PlayerNeverWasOn2b2tError
-                        #return {"chats": [], "total": 0, "pageCount": 0}
+                        # return {"chats": [], "total": 0, "pageCount": 0}
                     data = await resp.json()
                     return data
         except self.PlayerNeverWasOn2b2tError:
@@ -340,10 +387,14 @@ class Api2b2t:
         except requests.exceptions.JSONDecodeError:
             raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
 
-    def format_chat_message(self, message):
+    def format_chat_message(self, message, with_time=True):
+        if with_time:
+            time_ = f"[<code>{html.escape(self.format_iso_time(message["time"]))}</code>]"
+        else:
+            time_ = ""
         if bool(message.get("playerName", False)):
-            return f'💬 <code>{html.escape(message["playerName"])}</code> [<code>{html.escape(self.format_iso_time(message["time"]))}</code>]: <code>{html.escape(message["chat"])}</code>\n'
-        return f'💬 [<code>{html.escape(self.format_iso_time(message["time"]))}</code>]: <code>{html.escape(message["chat"])}</code>\n'
+            return f'💬 <code>{html.escape(message["playerName"])}</code> {time_}: <code>{html.escape(message["chat"])}</code>'
+        return f'💬 {time_ + ": " if with_time else ''}<code>{html.escape(message["chat"])}</code>'
 
     async def get_printable_2b2t_chat_search_page(self, query_id):
         try:
@@ -370,7 +421,7 @@ class Api2b2t:
             out += "\n"
 
             for i in data["chats"]:
-                out += self.format_chat_message(i)
+                out += self.format_chat_message(i) + "\n"
 
             await self.bot.db.update_saved_state(query_id, saved_state)
             return out
@@ -401,7 +452,6 @@ class Api2b2t:
                 data = await self.get_messages_from_player_in_2b2t_chat(player_name=player_name, page=current_page,
                                                                         page_size=page_size)
 
-
             pages_count = saved_state["pages_count"] = int(data["pageCount"])
             total = saved_state["total"] = int(data["total"])
             out = await self.bot.get_translation(saved_state["user_id"], "outputSearchMessagesFromPlayerHeader",
@@ -412,7 +462,7 @@ class Api2b2t:
             out += "\n"
 
             for i in data["chats"]:
-                out += self.format_chat_message(i)
+                out += self.format_chat_message(i) + "\n"
 
             await self.bot.db.update_saved_state(query_id, saved_state)
 
@@ -421,6 +471,31 @@ class Api2b2t:
             raise self.PlayerNeverWasOn2b2tError
         except Exception as e:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
+
+    async def listen_to_chat_feed(self, callback: Awaitable[dict]):
+        """
+        Подключается к SSE-потоку /feed/chats и вызывает callback при новых сообщениях.
+        """
+        url = "https://api.2b2t.vc/feed/chats"
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(url, headers={"Accept": "text/event-stream"}) as resp:
+                    if resp.status != 200:
+                        raise self.Api2b2tError(f"Error: HTTP {resp.status}")
+
+                    # Читаем поток событий
+                    async for line in resp.content:
+                        if line.startswith(b"data:"):
+                            try:
+                                message = json.loads(line[5:].strip())
+                                await callback(message)
+                            except json.JSONDecodeError as e:
+                                raise self.Api2b2tError(f"Error parsing JSON: {e}")
+
+
+            except Exception as e:
+                raise self.Api2b2tError(f"Ошибка в SSE-подключении: {e}")
 
     async def seconds_to_hms(self, seconds: int, user_id) -> str:
         """
@@ -463,17 +538,20 @@ class Api2b2t:
 
 async def main():
     api = Api2b2t()
+
     # print(await api.get_messages_from_player_in_2b2t_chat(player_name="babwy", page=1))
     # print(await api.get_2b2t_tablist())
     # pprint(await api.get_2b2t_info())
     # pprint(await api.get_2b2t_tablist_pages_count(20))
+    async def on_chat_msg(event):
+        print("ev:", event)
 
-    print(await api.get_playtime_top_page())
+    while True:
+        await api.listen_to_chat_feed(on_chat_msg)
+        await asyncio.sleep(2)
 
-
-    #print(await api.get_2b2t_tablist_page(1, 3))
-    #print(await api.get_2b2t_tablist_page(2, 3))
-
+    # print(await api.get_2b2t_tablist_page(1, 3))
+    # print(await api.get_2b2t_tablist_page(2, 3))
 
 
 if __name__ == '__main__':

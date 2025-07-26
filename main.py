@@ -32,6 +32,7 @@ from models.handlers.search_messages_from_player import *
 from models.handlers.callback_tablist import *
 from models.handlers.callback_get_playtime_top import *
 from models.handlers.text import *
+from models.utils.live_events import *
 
 
 class Stats2b2tBot:
@@ -68,6 +69,7 @@ class Stats2b2tBot:
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
+        self.live_events = LiveEvents(LIVE_EVENTS, self)
 
         self.api_2b2t = api.Api2b2t(self)
 
@@ -155,7 +157,6 @@ class Stats2b2tBot:
                     ],
                     [
                         KeyboardButton(text=await self.get_translation(user_id, "sendDonate")),
-
 
                     ]
                 ],
@@ -486,7 +487,18 @@ class Stats2b2tBot:
 async def main():
     bot = Stats2b2tBot(TELEGRAM_BOT_TOKEN)
     await bot.initialize()
-    await bot.run()
+
+    bot_task = asyncio.create_task(bot.run())
+    tasks = [bot_task]
+    tasks += bot.live_events.tasks
+
+    try:
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError:
+        for i in tasks:
+            i.cancel()
+
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 if __name__ == '__main__':

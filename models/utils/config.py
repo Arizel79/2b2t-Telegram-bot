@@ -1,17 +1,22 @@
+import json
+
 from dotenv import load_dotenv
 import os
 
 
 load_dotenv()
 
-LOGS_FILE = "../../log.log"
+configs = json.load(open("config.json", "r"))
 
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-ADMIN_ID = int(os.getenv("ADMIN_ID", ""))
-LOGS_GROUP_ID = int(os.getenv("LOGS_GROUP_ID", ""))
-SEND_LOGS = int(os.getenv("SEND_LOGS", "0"))
-LOGS_GROUP_THREAD_ID = int(os.getenv("LOGS_GROUP_THREAD_ID", "0"))
+TELEGRAM_BOT_TOKEN = configs["configs"]["telegram_bot_token"]
+ADMIN_ID =  configs["configs"]["admin_telegram_id"]
+
+SEND_LOGS = configs["send_bot_logs"]["bot_logs"]
+LOGS_GROUP_ID= configs["send_bot_logs"]["chat_id"]
+LOGS_GROUP_THREAD_ID = configs["send_bot_logs"]["supergroup_thread_id"]
+
+LIVE_EVENTS = configs["send_live_events_to_telegram_chat"]
 
 assert TELEGRAM_BOT_TOKEN != "", "TELEGRAM_BOT_TOKEN is invalid"
 
@@ -28,6 +33,7 @@ CALLBACK_PLAYTIME_TOP = "pt_top"
 
 SEARCH_PAGE_SIZE = 16
 SEARCH_FROM_PLAYER_PAGE_SIZE = 30
+CHAT_HISTORY_PAGE_SIZE = 10
 TABLIST_PAGE_SIZE = 80
 PLAYTIME_TOP_PAGE_SIZE = 10
 
