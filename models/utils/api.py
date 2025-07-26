@@ -389,7 +389,7 @@ print(formatted_str)  # 2022-10-31T01:30:00.000'''
 
     def format_chat_message(self, message, with_time=True):
         if with_time:
-            time_ = f"[<code>{html.escape(self.format_iso_time(message["time"]))}</code>]"
+            time_ = f"[<code>{html.escape(self.format_iso_time(message['time']))}</code>]"
         else:
             time_ = ""
         if bool(message.get("playerName", False)):

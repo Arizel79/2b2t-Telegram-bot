@@ -484,6 +484,19 @@ class Stats2b2tBot:
         await self.dp.start_polling(self.bot)
 
 
+async def shutdown(signal, loop, tasks):
+    """Обработка завершения работы"""
+    print(f"Получен сигнал {signal.name}, завершение работы...")
+
+    # Отменяем все задачи
+    for task in tasks:
+        task.cancel()
+
+    # Ждем завершения задач с обработкой исключений
+    await asyncio.gather(*tasks, return_exceptions=True)
+    loop.stop()
+
+
 async def main():
     bot = Stats2b2tBot(TELEGRAM_BOT_TOKEN)
     await bot.initialize()
@@ -492,16 +505,29 @@ async def main():
     tasks = [bot_task]
     tasks += bot.live_events.tasks
 
+    # Настройка обработки сигналов
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(
+            sig,
+            lambda s=sig: asyncio.create_task(shutdown(s, loop, tasks))
+        )
+
     try:
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
-        for i in tasks:
-            i.cancel()
-
-        await asyncio.gather(*tasks, return_exceptions=True)
+        pass  # Ожидаемое завершение
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+    finally:
+        print("Бот завершил работу")
 
 
 if __name__ == '__main__':
     import asyncio
+    import signal
 
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Завершение работы по Ctrl+C")
