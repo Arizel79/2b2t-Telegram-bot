@@ -1,0 +1,15 @@
+
+{
+  "configs": {
+  "telegram_bot_token": "",
+  "admin_telegram_id": 123456
+  },
+  "send_bot_logs": {
+    "bot_logs": false,
+    "chat_id": -100123456,
+    "supergroup_thread_id": null
+  },
+  "send_live_events_to_telegram_chat": [
+
+  ]
+}
