@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 from typing import Dict, Any
 import aiohttp
 from models.utils.config import *
-
+from models.utils.utils import *
+import logging
 import asyncio
 from typing import Callable, Awaitable
 import json
@@ -26,7 +27,7 @@ class Api2b2t:
 
     def __init__(self, bot=None):
         self.bot = bot
-
+        self.logger = setup_logger("api_2b2t", "api_2b2t.log", logging.INFO)
         # CACHE
         self.old_time_get_2b2t_info = 0
         self.cached_2b2t_info = None
@@ -37,6 +38,13 @@ class Api2b2t:
         self.old_time_get_2b2t_playtime_top = 0
         self.cached_2b2t_playtime_top = None
 
+        self.old_time_get_2b2t_kills_top = 0
+        self.cached_2b2t_kills_top = None
+
+        self.old_time_get_2b2t_deaths_top = 0
+        self.cached_2b2t_deaths_top = None
+
+
         self.last_time_get_2b2t_chat_history = datetime.now(tz=timezone.utc)
 
     class Api2b2tError(Exception):
@@ -46,6 +54,15 @@ class Api2b2t:
         pass
 
     class SSEError(Exception):
+        pass
+
+    class PlayerNotFound(Exception):
+        pass
+
+    class PlayerNotFoundByUUID(PlayerNotFound):
+        pass
+
+    class PlayerNotFoundByUsername(PlayerNotFound):
         pass
 
     async def get_2b2t_tablist(self):
@@ -71,6 +88,13 @@ class Api2b2t:
         tablist["players"] = tablist["players"][start:end]
         return tablist
 
+    async def get_2b2t_tablist_pages_count(self, page_size=TABLIST_PAGE_SIZE) -> int:
+        n = (await self.get_2b2t_tablist())["count"] / page_size
+        if n == int(n):
+            return int(n) - 1
+        else:
+            return int(n)
+
     async def get_playtime_top_page(self, page=1, page_size=20):
         start = (page - 1) * page_size
         end = start + page_size
@@ -78,13 +102,6 @@ class Api2b2t:
         playtime_top = dict(await self.get_playtime_top())
         playtime_top["players"] = playtime_top["players"][start:end]
         return playtime_top
-
-    async def get_2b2t_tablist_pages_count(self, page_size=TABLIST_PAGE_SIZE) -> int:
-        n = (await self.get_2b2t_tablist())["count"] / page_size
-        if n == int(n):
-            return int(n) - 1
-        else:
-            return int(n)
 
     async def get_playtime_top_pages_count(self, page_size=PLAYTIME_TOP_PAGE_SIZE) -> int:
         n = len((await self.get_playtime_top())["players"]) / page_size
@@ -204,77 +221,143 @@ class Api2b2t:
             out += f"{n_in_top}. <code>{await self.seconds_to_hms(i['playtimeSeconds'], user_id)}</code> - <code>{i['playerName']}</code>\n"
         return out
 
-    async def get_player_stats(self, player: str = None, uuid: str = None) -> Dict[str, Any] or None:
-        assert (not player is None) or (not uuid is None)
+    async def get_player_stats(self, username: str = None, uuid: str = None) -> Dict[str, Any] or None:
+        assert (not username is None) or (not uuid is None)
 
-        if not player is None:
-            is_uuid = False
-            url = f"https://api.2b2t.vc/stats/player?playerName={player}"
-        elif not uuid is None:
+        if username is None:
             is_uuid = True
             url = f"https://api.2b2t.vc/stats/player?uuid={uuid}"
+        elif uuid is None:
+            is_uuid = False
+            url = f"https://api.2b2t.vc/stats/player?playerName={username}"
+
         else:
             raise self.Api2b2tError("player and uuid are invalid")
+
+        if is_uuid:
+            username = await self.get_username_from_uuid(uuid)
+        elif not is_uuid:
+            uuid = await self.get_uuid_from_username(username)
+        else:
+            assert False
+
+        self.logger.info(f"!! uuid={uuid}; username={username};")
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
-
                     result = {}
                     if is_uuid:
                         result["uuid"] = uuid
                     else:
-                        result["player"] = player
+                        result["player"] = username
 
                     result.update(await response.json())
+                    result["username"] = username
+                    result["uuid"] = uuid
+
+                    if result["firstSeen"] is None:
+                        raise self.PlayerNeverWasOn2b2tError("!!DQ")
 
                     return result
+
         except aiohttp.client_exceptions.ContentTypeError as e:
-            raise self.PlayerNeverWasOn2b2tError
+            raise self.PlayerNeverWasOn2b2tError("!!!eee")
+
         except Exception as e:
-            raise self.Api2b2tError(f"{type(e).__name__}: {e}")
+            if isinstance(e,
+                          (self.PlayerNeverWasOn2b2tError, self.PlayerNotFoundByUsername, self.PlayerNotFoundByUUID)):
+                raise
+            else:
+                raise self.Api2b2tError(f"{type(e).__name__}: {e}")
 
-    async def get_printaleble_player_stats(self, user_id, player=None, uuid=None):
-        is_player_online = False
-        tablist = await self.get_2b2t_tablist()
-        use_uuid = False
-        if player is not None:
+    async def get_printable_player_stats(self, user_id, username=None, uuid=None):
+        try:
+            self.logger.info(f"User {user_id} gets stats of username={username} / uuid={uuid}")
+            result = {}
+            if uuid is not None:
+                use_uuid = True
+            elif username is not None:
+                use_uuid = False
+            else:
+                raise RuntimeError("no uuid or username!!1")
+            result["by_uuid"] = use_uuid
 
-            view_player = player
-            is_player_online = any(p["playerName"].lower() == player.lower() for p in tablist["players"])
-        elif uuid is not None:
-            use_uuid = True
-            view_player = uuid
-            is_player_online = any(p["uuid"] == uuid for p in tablist["players"])
+            if use_uuid:
+                username = await self.get_username_from_uuid(uuid)
+            elif not use_uuid:
+                uuid = await self.get_uuid_from_username(username)
+            else:
+                assert False
 
-        data = await self.get_player_stats(player, uuid)
-        online = ("\n" + await self.bot.get_translation(user_id, 'isPlayerOnline')) if is_player_online else ''
+            result.update({"username": username, "uuid": uuid})
+            if use_uuid:
+                data = await self.get_player_stats(uuid=uuid)
+            else:
+                data = await self.get_player_stats(username=username)
 
-        if not data.get("firstSeen", False):
-            return await self.bot.get_translation(user_id, "playerWasNotOn2b2t", player, player)
-        text = await self.bot.get_translation(user_id, "playerStats",
-                                              view_player, online, self.format_iso_time(data['firstSeen']),
-                                              self.format_iso_time(data['lastSeen']), data['chatsCount'],
-                                              data['deathCount'],
-                                              data['killCount'],
-                                              data['joinCount'], data['leaveCount'],
-                                              await self.seconds_to_hms(data['playtimeSeconds'], user_id),
-                                              await self.seconds_to_hms(data['playtimeSecondsMonth'], user_id),
-                                              await self.bot.get_translation(user_id, "prioActive") if data[
-                                                  'prio'] else '')
-        return text
+            tablist = await self.get_2b2t_tablist()
+
+            if not use_uuid:
+                view_player = username
+                is_player_online = any(p["playerName"].lower() == username.lower() for p in tablist["players"])
+            elif use_uuid:
+                view_player = uuid
+                is_player_online = any(p["uuid"] == uuid for p in tablist["players"])
+            else:
+                raise RuntimeError()
+            online = ("\n" + await self.bot.get_translation(user_id, 'isPlayerOnline')) if is_player_online else ''
+
+
+            text = await self.bot.get_translation(user_id, "playerStats",
+                                                  data["username"], online,data["username"], data["uuid"], self.format_iso_time(data['firstSeen']),
+                                                  self.format_iso_time(data['lastSeen']), data['chatsCount'],
+                                                  data['deathCount'],
+                                                  data['killCount'],
+                                                  data['joinCount'], data['leaveCount'],
+                                                  await self.seconds_to_hms(data['playtimeSeconds'], user_id),
+                                                  await self.seconds_to_hms(data['playtimeSecondsMonth'], user_id),
+                                                  await self.bot.get_translation(user_id, "prioActive") if data[
+                                                      'prio'] else '')
+            # return {"text": text, "show_kbd": True, }
+            result.update({"text": text, "show_kbd": True})
+            return result
+        except self.PlayerNotFoundByUUID:
+            text = await self.bot.get_translation(user_id, "playerNotFoundByUUID", uuid)
+            result.update({"text": text, "show_kbd": False})
+            return result
+        except self.PlayerNotFoundByUsername:
+            text = await self.bot.get_translation(user_id, "playerNotFoundByUsername", username)
+            result.update({"text": text, "show_kbd": False})
+            return result
+        except self.PlayerNeverWasOn2b2tError:
+            text = await self.bot.get_translation(user_id, "playerWasNotOn2b2t", username)
+            result.update({"text": text, "show_kbd": False})
+            return result
+        except self.Api2b2tError as e:
+            self.logger.error("Error in get_printable_player_stats:")
+            self.logger.exception(e)
+            text = await self.bot.get_translation(user_id, "error")
+            result.update({"text": text, "show_kbd": False})
+            return result
+
+        except Exception as e:
+            self.logger.error("Error in get_printaleble_player_stats:")
+            self.logger.exception(e)
+            text = await self.bot.get_translation(user_id, "error")
+            result.update({"text": text, "show_kbd": False})
+            return result
+
 
     async def get_2b2t_chat_history(
-            self,
-            start_date: datetime,
-            end_date: datetime,
-            page: int = 1,
-            page_size=CHAT_HISTORY_PAGE_SIZE,
-            sort=None,
-    ):
-        '''
-dt = datetime.now(tz=timezone.utc)
-formatted_str = dt.isoformat(timespec='milliseconds')  # Форматирование в строку
-print(formatted_str)  # 2022-10-31T01:30:00.000'''
+                                self,
+                                start_date: datetime,
+                                end_date: datetime,
+                                page: int = 1,
+                                page_size=CHAT_HISTORY_PAGE_SIZE,
+                                sort=None,
+                        ):
+
         try:
             base_url = "https://api.2b2t.vc/chats/window"
             params = {"startDate": start_date.isoformat(timespec='milliseconds'),
@@ -286,7 +369,6 @@ print(formatted_str)  # 2022-10-31T01:30:00.000'''
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(base_url, params=params) as resp:
-                    print("URL:", resp.url)
                     data = await resp.json()
                     return data
 
@@ -380,7 +462,7 @@ print(formatted_str)  # 2022-10-31T01:30:00.000'''
                     data = await resp.json()
                     return data
         except self.PlayerNeverWasOn2b2tError:
-            raise self.PlayerNeverWasOn2b2tError
+            raise self.PlayerNeverWasOn2b2tError("PlayerNeverWasOn2b2tError str")
         except Exception as e:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
 
@@ -434,7 +516,7 @@ print(formatted_str)  # 2022-10-31T01:30:00.000'''
             current_page = saved_state["page"]
             page_size = saved_state["page_size"]
 
-            player_name = saved_state.get("player_name", None)
+            player_name = saved_state.get("player_username", None)
             uuid = saved_state.get("player_uuid", None)
 
             if not uuid is None:
@@ -469,7 +551,9 @@ print(formatted_str)  # 2022-10-31T01:30:00.000'''
             return out
         except self.PlayerNeverWasOn2b2tError:
             raise self.PlayerNeverWasOn2b2tError
+
         except Exception as e:
+            self.logger.exception(e)
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
 
     async def listen_to_chat_feed(self, callback: Awaitable[dict]):
@@ -535,23 +619,58 @@ print(formatted_str)  # 2022-10-31T01:30:00.000'''
         except ValueError as e:
             return f"Ошибка: {str(e)}"
 
+    async def get_uuid_from_username(self, username):
+        """Получает UUID игрока по его никнейму (асинхронно)."""
+        url = f"https://api.mojang.com/users/profiles/minecraft/{username}"
+        self.logger.debug(f"Getting UUID for username: {username}")
+
+        if not is_valid_minecraft_username(username):
+            raise ValueError(f"username {username} is not valid!")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    uuid = data.get("id")
+                    if '-' not in uuid:
+                        formatted_uuid = f"{uuid[:8]}-{uuid[8:12]}-{uuid[12:16]}-{uuid[16:20]}-{uuid[20:]}"
+                    else:
+                        formatted_uuid = uuid
+                    self.logger.debug(f"Recieved uuid: {uuid} for username: {username}")
+                    return formatted_uuid
+                else:
+                    self.logger.error(f"While getting uuid for username={username}: Error code {response.status}: ")
+                    raise self.PlayerNotFoundByUsername(f"Player {username} not found")
+
+    async def get_username_from_uuid(self, uuid):
+        """Получает текущий никнейм игрока по его UUID (асинхронно)."""
+
+        self.logger.debug(f"Getting username for UUID: {uuid}")
+        if not is_valid_minecraft_uuid(uuid):
+            raise ValueError(f"Invalid UUID: {uuid}")
+        uuid = uuid.replace("-", "")
+
+        url = f"https://sessionserver.mojang.com/session/minecraft/profile/{uuid}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status in [200, 400]:
+                    data = await response.json()
+                    username = data.get("name")
+                    self.logger.info(f"Received username for uuid={uuid}: {username}")
+                    return username
+                else:
+                    self.logger.error(f"While getting username for uuid={uuid}: Error code {response.status}")
+                    if response.status in (204,):
+                        raise self.PlayerNotFoundByUUID(f"UUID {uuid} not found")
+
+                    else:
+                        raise self.Api2b2tError(f"HTTP status: {response.status}; uuid={uuid}")
+
 
 async def main():
-    api = Api2b2t()
+    pass
 
-    # print(await api.get_messages_from_player_in_2b2t_chat(player_name="babwy", page=1))
-    # print(await api.get_2b2t_tablist())
-    # pprint(await api.get_2b2t_info())
-    # pprint(await api.get_2b2t_tablist_pages_count(20))
-    async def on_chat_msg(event):
-        print("ev:", event)
 
-    while True:
-        await api.listen_to_chat_feed(on_chat_msg)
-        await asyncio.sleep(2)
-
-    # print(await api.get_2b2t_tablist_page(1, 3))
-    # print(await api.get_2b2t_tablist_page(2, 3))
 
 
 if __name__ == '__main__':

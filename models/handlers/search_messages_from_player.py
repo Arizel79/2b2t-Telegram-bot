@@ -32,7 +32,7 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
     saved_state = {"type": "msgs from player", "page": 1,
                                              "user_id": message.from_user.id, "page_size":SEARCH_FROM_PLAYER_PAGE_SIZE}
     if is_valid_minecraft_username(query):
-        saved_state["player_name"] = query
+        saved_state["player_username"] = query
     elif is_valid_minecraft_uuid(query):
         saved_state["player_uuid"] = query
     else:

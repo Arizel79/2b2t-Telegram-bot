@@ -5,9 +5,10 @@
     "helpMessage": "<b>Help</b>\nMain commands:\n• /help - Show this help\n\nServer statistics:\n• /stats (or /i, /info) - Current 2b2t status\n• /tablist (or /t, /tab) - List of online players\n\nPlayer statistics:\n• <code>/player name</code> (or /pl, /p) - Find player statistics\nExample: <code>/player xcc2</code>\n• /playtime_top - Top 1000 players with the most playtime on 2b2t\n\n2b2t chat messages:\n• <code>/search query</code> - search 2b2t chat with <code>query</code>\n• <code>/from player</code> - search messages from player <code>player</code>",
     "userError": "❌ <b>Error</b>\nPlease check your request\n\nHelp: /help",
     "error": "❌ <b>Error</b>\nPlease try again later",
+    "unknownError": "❌❌❌ <b>Unknown error</b> ❌❌❌\nPlease try again later",
     "waitPlease": "⏳ <b>Please wait</b>\nProcessing your request...",
     "langSelected": "Language set to: \uD83C\uDDFA\uD83C\uDDF8 English",
-    "playerStats": "<b>\uD83D\uDCCA Statistics of <code>{}</code> on 2b2t</b>\n{}\n\uD83D\uDCC5 First join: <code>{}</code>\n\uD83D\uDCC5 Last join: <code>{}</code>\n\uD83D\uDCAC Chat messages: <code>{}</code>\n\uD83D\uDC80 Deaths: <code>{}</code>\n☠\uFE0F Kills: <code>{}</code>\n➡\uFE0F Joined server: <code>{}</code> times\n⬅\uFE0F Left server: <code>{}</code> times\n\uD83D\uDD52 Playtime: <code>{}</code>\n\uD83D\uDD52 Monthly playtime: <code>{}</code>\n{}",
+    "playerStats": "<b>\uD83D\uDCCA Statistics of <code>{}</code> on 2b2t</b>\n{}\n\uD83D\uDCDD Username: <code>{}</code>\n\uD83C\uDD94 UUID: <code>{}</code>\n\uD83D\uDCC5 First join: <code>{}</code>\n\uD83D\uDCC5 Last join: <code>{}</code>\n\uD83D\uDCAC Chat messages: <code>{}</code>\n\uD83D\uDC80 Deaths: <code>{}</code>\n☠\uFE0F Kills: <code>{}</code>\n➡\uFE0F Joined server: <code>{}</code> times\n⬅\uFE0F Left server: <code>{}</code> times\n\uD83D\uDD52 Playtime: <code>{}</code>\n\uD83D\uDD52 Monthly playtime: <code>{}</code>\n{}",
     "playerWasNotOn2b2t": "<code>{}</code> has never joined 2b2t",
     "prioActive": "⭐\uFE0F Priority queue is active",
     "isPlayerOnline": "\uD83D\uDFE2 Player is online",
@@ -43,7 +44,10 @@
     "searchMessagesFromPlayerCommandUsage": "Incorrect command usage.\nUsage: <code>/from name_or_uuid</code>, where name_or_uuid is player nickname/UUID",
     "playerStatsCommandUsage": "Incorrect command usage.\nUsage: <code>/player name_or_uuid</code>, where name_or_uuid is player nickname/UUID",
     "getPlayerChatMessagesViaPlayerStats": "\uD83D\uDCAC Player's chat messages",
-    "nothingHere": "There's nothing here..."
+    "nothingHere": "There's nothing here...",
+    "playerNotFound": "Player not found!",
+    "playerNotFoundByUUID": "Player with uuid <code>{}</code> not found!",
+    "playerNotFoundByUsername": "Player with username <code>{}</code> not found!"
 },
   "ru": {
     "langName": "\uD83C\uDDF7\uD83C\uDDFA Русский",

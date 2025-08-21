@@ -29,19 +29,4 @@ async def handler_get_player_stats(self, message: types.Message, register_msg: b
 
     msg = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"))
 
-    try:
-        answer_ = await self.get_player_stats_answer(query, message.from_user.id, register_query_id=True)
-        if len(answer_) == 2:
-            answer, query_id = answer_
-            await msg.edit_text(answer,
-                                reply_markup=await self.get_player_stats_keyboard(message.from_user.id, query_id))
-        else:
-            return
-
-    except self.api_2b2t.Api2b2tError as e:
-        self.logger.error(e)
-        await msg.edit_text(await self.get_translation(message.from_user.id, "userError"))
-
-    except Exception as e:
-        self.logger.error(e)
-        await msg.edit_text(await self.get_translation(message.from_user.id, "error"))
+    await self.get_player_stats_and_edit_message(message.from_user.id, query, msg)
