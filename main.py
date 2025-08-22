@@ -7,10 +7,12 @@ from aiogram import F
 from aiogram.filters.command import Command
 from aiogram.enums import ParseMode
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+import pytz
 import html
 import time
 import requests
-
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from models.utils.orm import AsyncDatabaseSession
 from models.utils.translations import *
 from models.handlers.help_message import *
@@ -25,6 +27,8 @@ from models.handlers.get_player_stats import *
 from models.handlers.get_2b2t_info import *
 from models.handlers.get_2b2t_tablist import *
 from models.handlers.get_playtime_top import *
+from models.handlers.get_kills_top_month import *
+from models.handlers.callback_get_kills_top_month import *
 from models.handlers.callback_tablist import *
 from models.handlers.callback_chat_search import *
 from models.handlers.callback_get_messages_from_player import *
@@ -33,6 +37,7 @@ from models.handlers.callback_tablist import *
 from models.handlers.callback_get_playtime_top import *
 from models.handlers.text import *
 from models.utils.live_events import *
+from models.handlers.inline_query import handler_inline_query
 
 
 class Stats2b2tBot:
@@ -54,6 +59,9 @@ class Stats2b2tBot:
     handler_search_messages_from_player_callback = handler_search_messages_from_player_callback
     handler_get_playtime_top = handler_get_playtime_top
     handler_playtime_top_callback = handler_playtime_top_callback
+    handler_get_kills_top_month = handler_get_kills_top_month
+    handler_kills_top_month_callback = handler_kills_top_month_callback
+    handler_inline_query = handler_inline_query
 
     async def get_translation(self, *kwargs):
         return await self.translator.get_translation(*kwargs)
@@ -87,6 +95,8 @@ class Stats2b2tBot:
 
     async def _register_handlers(self):
 
+        self.dp.inline_query()(self.handler_inline_query)
+
         self.dp.message(Command("start"))(self.handler_start_message)
         self.dp.message(Command("settings"))(self.handler_settings_message)
         self.dp.message(Command("help", "h"))(self.handler_help_message)
@@ -101,6 +111,7 @@ class Stats2b2tBot:
             self.handler_search_messages_from_player_callback)
         self.dp.callback_query(F.data.startswith("setlang"))(self.handler_callback_set_language)
         self.dp.callback_query(F.data.startswith(CALLBACK_PLAYTIME_TOP))(self.handler_playtime_top_callback)
+        self.dp.callback_query(F.data.startswith(CALLBACK_KILLS_TOP_MONTH))(self.handler_kills_top_month_callback)
 
         self.dp.message(Command("player", "pl", "p"))(self.handler_get_player_stats)
         self.dp.message(Command("i", "info", "stats", "stat"))(self.handler_get_2b2t_info)
@@ -108,6 +119,8 @@ class Stats2b2tBot:
         self.dp.message(Command("from"))(self.handler_search_messages_from_player)
 
         self.dp.message(Command("pt_top", "playtime_top", "playtimetop", "pttop"))(self.handler_get_playtime_top)
+        self.dp.message(Command("kills_top_month", "kills_top", "killstopmonth", "kstop"))(
+            self.handler_get_kills_top_month)
 
         self.dp.message()(self.handler_text)
         # no handlers down!!!
@@ -118,7 +131,7 @@ class Stats2b2tBot:
                     f"{html.escape(from_user.first_name)}"
                     f"{'' if not from_user.last_name else f' {html.escape(from_user.last_name)}'}"
                     f" ({f'@{from_user.username}, ' if from_user.username else ''}"
-                    f"<a href=\"{'tg://user?id=' + str(from_user.id)})\">" + str(from_user.id) + "</a>"
+                    f"<a href=\"{'tg://user?id=' + str(from_user.id)}\">" + str(from_user.id) + "</a>"
                                                                                                  f"{(', chat: ' + '<code>' + str(from_chat.id) + '</code>') if not from_chat is None else ''})"
             )
         else:
@@ -126,17 +139,34 @@ class Stats2b2tBot:
                 f"{from_user.first_name}"
                 f"{'' if not from_user.last_name else f' {from_user.last_name}'}"
                 f" ({f'@{from_user.username}, ' if from_user.username else ''}"
-                f"{'tg://user?id=' + str(from_user.id)}"
-                f"{(', chat_id: ' + str(from_chat.id)) if not from_chat is None else ''})")
+                f"{f'id: {from_user.id}'}"
+                f"{(', chat: ' + str(from_chat.id)) if not from_chat is None else ''})")
 
-    async def get_printable_time(self) -> str:
-        return time.strftime("%H:%M.%S %d.%m.%Y", time.localtime())
 
-    async def write_msg(self, msg: str) -> None:
+    async def get_printable_time(self, unix_time=None) -> str:
+        # Указываем вашу временную зону
+        timezone = pytz.timezone("Europe/Moscow")
+
+        # Если передан объект datetime, преобразуем его в timestamp
+        if isinstance(unix_time, datetime):
+            unix_time = unix_time.timestamp()
+
+        if unix_time:
+            # Создаем объект времени из Unix-времени
+            dt_utc = datetime.fromtimestamp(unix_time, tz=pytz.utc)
+            # Конвертируем в нужную временную зону
+            dt_local = dt_utc.astimezone(timezone)
+        else:
+            # Получаем текущее время в нужной временной зоне
+            dt_local = datetime.now(timezone)
+
+        return dt_local.strftime("%H:%M.%S %d.%m.%Y")
+
+    async def write_msg(self, msg: str, unix_timestamp=None) -> None:
         with open("msgs.txt", "a+", encoding="utf-8") as f:
-            text = f"[{await self.get_printable_time()}] {msg}\n"
-            f.write(text)
-            print(text, end="")
+            text = f"[{await self.get_printable_time(unix_timestamp)}] {msg}"
+            f.write(text + "\n")
+            self.logger.info(text)
 
     async def get_reply_kbd(self, user_id, chat_type):
         if chat_type == ChatType.PRIVATE:
@@ -147,16 +177,17 @@ class Stats2b2tBot:
                         KeyboardButton(text=await self.get_translation(user_id, "getPlayerStats"))
                     ],
                     [
-                        KeyboardButton(text=await self.get_translation(user_id, "searchChat")),
-                        KeyboardButton(text=await self.get_translation(user_id, "getSettings"))
+                        KeyboardButton(text=await self.get_translation(user_id, "getSettings")),
+                        KeyboardButton(text=await self.get_translation(user_id, "getTablist"))
                     ],
                     [
-                        KeyboardButton(text=await self.get_translation(user_id, "getTablist")),
-                        KeyboardButton(text=await self.get_translation(user_id, "getPlaytimeTop"))
+                        KeyboardButton(text=await self.get_translation(user_id, "getPlaytimeTop")),
+                        KeyboardButton(text=await self.get_translation(user_id, "getKillsTopMonth"))
 
                     ],
                     [
                         KeyboardButton(text=await self.get_translation(user_id, "sendDonate")),
+                        KeyboardButton(text=await self.get_translation(user_id, "getSettings"))
 
                     ]
                 ],
@@ -306,8 +337,12 @@ class Stats2b2tBot:
         elif saved_state["type"] == "playtime_top":
             callback_ = CALLBACK_PLAYTIME_TOP
             pages_count = await self.api_2b2t.get_playtime_top_pages_count(page_size)
+
+        elif saved_state["type"] == "kills_top_month":
+            callback_ = CALLBACK_KILLS_TOP_MONTH
+            pages_count = await self.api_2b2t.get_kills_top_month_pages_count(page_size)
         else:
-            assert False, f"Asdawead1039 {saved_state['type']}"
+            assert False, f"Unknown saved state type: {saved_state['type']}"
 
         if current_page > 1:
             builder.add(
@@ -392,8 +427,9 @@ class Stats2b2tBot:
         if is_valid_minecraft_uuid(query):
             answer = await self.api_2b2t.get_printable_player_stats(user_id, uuid=query)
             query_id = None
-            if register_query_id:
-                saved_state = {"type": "msgs from player", "player_uuid": query, "player_username": answer["username"], "page": 1,
+            if register_query_id and answer["show_kbd"]:
+                saved_state = {"type": "msgs from player", "player_uuid": query, "player_username": answer["username"],
+                               "page": 1,
                                "user_id": user_id, "page_size": SEARCH_FROM_PLAYER_PAGE_SIZE,
                                "via_player_stats": True, "use_uuid": True}
                 query_id = await self.db.add_saved_state(saved_state)
@@ -403,15 +439,15 @@ class Stats2b2tBot:
         elif is_valid_minecraft_username(query):
             answer = await self.api_2b2t.get_printable_player_stats(user_id, username=query)
             query_id = None
-            if register_query_id:
-                saved_state = {"type": "msgs from player",  "player_uuid": answer["uuid"], "player_username": query, "page": 1,
+            if register_query_id and answer["show_kbd"]:
+                saved_state = {"type": "msgs from player", "player_uuid": answer["uuid"], "player_username": query,
+                               "page": 1,
                                "user_id": user_id, "page_size": SEARCH_FROM_PLAYER_PAGE_SIZE,
-                               "via_player_stats": True,  "use_uuid": True}
+                               "via_player_stats": True, "use_uuid": True}
                 query_id = await self.db.add_saved_state(saved_state)
-            print(answer)
             return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd']}
         else:
-            raise self.api_2b2t.Api2b2tError("not a name/uuid")
+            raise self.api_2b2t.Api2b2tError(f"{query} is not a valid username/uuid")
 
     async def get_player_stats_keyboard(self, user_id, query_id):
         builder = InlineKeyboardBuilder()
@@ -430,8 +466,17 @@ class Stats2b2tBot:
         return builder.as_markup()
 
     async def on_event(self, event) -> None:
+        user_id = event.from_user.id
+        if not await self.db.is_user_select_lang(event.from_user.id):
+
+            user_lang_code_tg = event.from_user.language_code
+            if user_lang_code_tg in LANG_CODES:
+                await self.db.update_lang(user_id, user_lang_code_tg)
+            else:
+                await self.db.update_lang(user_id, DEFAULT_LANG_CODE)
+
         if type(event) == types.Message:
-            user_id = event.from_user.id
+
             await self.write_msg(
                 f"{await self.get_printable_user(event.from_user, from_chat=event.chat)}: {event.text}")
 
@@ -445,13 +490,6 @@ class Stats2b2tBot:
                 await self.write_msg(
                     f"{await self.get_printable_user(event.from_user, from_chat=event.chat)} new user!")
 
-            if not await self.db.is_user_select_lang(event.from_user.id):
-
-                user_lang_code_tg = event.from_user.language_code
-                if user_lang_code_tg in LANG_CODES:
-                    await self.db.update_lang(user_id, user_lang_code_tg)
-                else:
-                    await self.db.update_lang(user_id, DEFAULT_LANG_CODE)
 
                 await event.reply(
                     "Select language\nВыбери язык\n",
@@ -477,7 +515,6 @@ class Stats2b2tBot:
                                                                                       answer_["query_id"]))
             else:
                 await msg.edit_text(answer_["answer"])
-            self.logger.warning(f"get_player_stats_answer returned {answer_}")
 
         except self.api_2b2t.PlayerNeverWasOn2b2tError as e:
             self.logger.error(e)
@@ -489,9 +526,9 @@ class Stats2b2tBot:
             await msg.edit_text(await self.get_translation(user_id, "userError"))
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(f"Error in get_player_stats_and_edit_message: {e}")
             self.logger.exception(e)
-            # await msg.edit_text(await self.get_translation(message.from_user.id, "error"))
+            await msg.edit_text(await self.get_translation(msg.from_user.id, "error"))
 
     async def get_settings_keyboard(self, user_id):
         builder = InlineKeyboardBuilder()
@@ -512,19 +549,6 @@ class Stats2b2tBot:
         await self.dp.start_polling(self.bot)
 
 
-async def shutdown(signal, loop, tasks):
-    """Обработка завершения работы"""
-    print(f"Получен сигнал {signal.name}, завершение работы...")
-
-    # Отменяем все задачи
-    for task in tasks:
-        task.cancel()
-
-    # Ждем завершения задач с обработкой исключений
-    await asyncio.gather(*tasks, return_exceptions=True)
-    loop.stop()
-
-
 async def main():
     bot = Stats2b2tBot(TELEGRAM_BOT_TOKEN)
     await bot.initialize()
@@ -533,27 +557,17 @@ async def main():
     tasks = [bot_task]
     tasks += bot.live_events.tasks
 
-    # Настройка обработки сигналов
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(
-            sig,
-            lambda s=sig: asyncio.create_task(shutdown(s, loop, tasks))
-        )
-
     try:
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
         pass  # Ожидаемое завершение
-    except Exception as e:
-        print(f"Произошла ошибка: {e}")
+
     finally:
-        print("Бот завершил работу")
+        print("Bot finished")
 
 
 if __name__ == '__main__':
     import asyncio
-    import signal
 
     try:
         asyncio.run(main())

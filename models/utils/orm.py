@@ -1,10 +1,11 @@
 import json
+import logging
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
-
+from models.utils.utils import *
 Base = declarative_base()
 
 
@@ -33,10 +34,13 @@ class AsyncDatabaseSession:
         self.async_session = async_sessionmaker(
             self.engine, expire_on_commit=False, class_=AsyncSession
         )
+        self.logger = setup_logger("orm", "orm.log", logging.INFO)
 
     async def create_all(self):
+
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        self.logger.debug("database created")
 
     async def get_user(self, user_id: int) -> User:
         async with self.async_session() as session:
@@ -63,7 +67,8 @@ class AsyncDatabaseSession:
 
             except Exception as e:
                 await session.rollback()
-                print(f"Database error: {type(e)} - {e}")
+                self.logger.error(f"Database error: {type(e)} - {e}")
+                self.logger.exception(e)
                 raise
 
     async def update_saved_state(self, state_id: int, data: dict):

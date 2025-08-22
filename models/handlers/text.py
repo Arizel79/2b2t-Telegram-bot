@@ -44,6 +44,9 @@ async def handler_text(self, message: types.Message) -> None:
         elif message.text == await self.get_translation(message.from_user.id, "getPlaytimeTop"):
             await self.handler_get_playtime_top(message, register_msg=False)
             return
+        elif message.text == await self.get_translation(message.from_user.id, "getKillsTopMonth"):
+            await self.handler_get_kills_top_month(message, register_msg=False)
+            return
 
         elif message.text == await self.translator.get_translation(message.from_user.id, "searchChat"):
             await message.reply(await self.translator.get_translation(message.from_user.id, "enterChatSearchQuery"))

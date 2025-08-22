@@ -32,18 +32,37 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
     saved_state = {"type": "msgs from player", "page": 1,
                                              "user_id": message.from_user.id, "page_size":SEARCH_FROM_PLAYER_PAGE_SIZE}
     if is_valid_minecraft_username(query):
-        saved_state["player_username"] = query
+        try:
+            uuid = await self.api_2b2t.get_uuid_from_username(query)
+            username = await self.api_2b2t.get_username_from_uuid(uuid)
+            if uuid:
+                saved_state["use_uuid"] = False
+        except self.api_2b2t.PlayerNotFound:
+            await message.reply(await self.get_translation(message.from_user.id, "playerNotFoundByUsername", query))
+            return
+
     elif is_valid_minecraft_uuid(query):
-        saved_state["player_uuid"] = query
+        try:
+            username = await self.api_2b2t.get_username_from_uuid(query)
+            uuid = await self.api_2b2t.get_uuid_from_username(username)
+            if username:
+                saved_state["use_uuid"] = True
+        except self.api_2b2t.PlayerNotFound:
+            await message.reply(await self.get_translation(message.from_user.id, "playerNotFoundByUUID", query))
+            return
+
     else:
-        await message.reply(await self.get_translation(message.from_user.id, "userError"))
+        await message.reply(await self.get_translation(message.from_user.id, "invalidData"))
         return
+    saved_state["player_username"] = username
+    saved_state["player_uuid"] = uuid
+
     query_id = await self.db.add_saved_state(saved_state)
 
     msg_my = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"))
     try:
         answer = await self.api_2b2t.get_printable_messages_from_player_in_2b2t_chat(query_id)
-        await msg_my.edit_text(answer, reply_markup=await self.get_markup_search_messages_from_player(query_id))
+        await msg_my.edit_text(answer["text"], reply_markup=await self.get_markup_search_messages_from_player(query_id))
 
     except self.api_2b2t.PlayerNeverWasOn2b2tError as e:
 

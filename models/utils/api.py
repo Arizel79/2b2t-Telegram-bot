@@ -22,8 +22,8 @@ class Api2b2t:
     GET_2B2T_INFO_CACHE_TIME = 60  # sec
     GET_2B2T_TABLIST_CACHE_TIME = 60  # sec
     GET_2B2T_PLAYTIME_TOP = 60 * 30  # sec
-    GET_2B2T_KILLS_TOP = 10  # sec
-    GET_2B2T_DEATHS_TOP = 10  # sec
+    GET_2B2T_KILLS_TOP_MONTH = 10  # sec
+    GET_2B2T_DEATHS_TOPA_MONTH = 10  # sec
 
     def __init__(self, bot=None):
         self.bot = bot
@@ -38,12 +38,11 @@ class Api2b2t:
         self.old_time_get_2b2t_playtime_top = 0
         self.cached_2b2t_playtime_top = None
 
-        self.old_time_get_2b2t_kills_top = 0
-        self.cached_2b2t_kills_top = None
+        self.old_time_get_2b2t_kills_top_month = 0
+        self.cached_2b2t_kills_top_month = None
 
-        self.old_time_get_2b2t_deaths_top = 0
-        self.cached_2b2t_deaths_top = None
-
+        self.old_time_get_2b2t_deaths_top_month = 0
+        self.cached_2b2t_deaths_top_month = None
 
         self.last_time_get_2b2t_chat_history = datetime.now(tz=timezone.utc)
 
@@ -95,7 +94,7 @@ class Api2b2t:
         else:
             return int(n)
 
-    async def get_playtime_top_page(self, page=1, page_size=20):
+    async def get_playtime_top_page(self, page=1, page_size=PLAYTIME_TOP_PAGE_SIZE):
         start = (page - 1) * page_size
         end = start + page_size
 
@@ -105,6 +104,21 @@ class Api2b2t:
 
     async def get_playtime_top_pages_count(self, page_size=PLAYTIME_TOP_PAGE_SIZE) -> int:
         n = len((await self.get_playtime_top())["players"]) / page_size
+        if n == int(n):
+            return int(n) - 1
+        else:
+            return int(n)
+
+    async def get_kills_top_month_page(self, page=1, page_size=KILLS_TOP_MONTH_PAGE_SIZE):
+        start = (page - 1) * page_size
+        end = start + page_size
+
+        kills_top_month = dict(await self.get_kills_top_month())
+        kills_top_month["players"] = kills_top_month["players"][start:end]
+        return kills_top_month
+
+    async def get_kills_top_month_pages_count(self, page_size=KILLS_TOP_MONTH_PAGE_SIZE) -> int:
+        n = len((await self.get_kills_top_month())["players"]) / page_size
         if n == int(n):
             return int(n) - 1
         else:
@@ -188,6 +202,22 @@ class Api2b2t:
                                                )
         return text
 
+    async def get_kills_top_month(self):
+        if time.time() > self.old_time_get_2b2t_kills_top_month + self.GET_2B2T_KILLS_TOP_MONTH:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get("https://api.2b2t.vc/kills/top/month") as response:
+                        data = await response.json()
+
+                self.cached_2b2t_kills_top_month = data
+                self.old_time_get_2b2t_kills_top_month = time.time()
+
+                return data
+            except Exception as e:
+                raise self.Api2b2tError(f"{type(e).__name__}: {e}")
+        else:
+            return self.cached_2b2t_kills_top_month
+
     async def get_playtime_top(self):
         if time.time() > self.old_time_get_2b2t_playtime_top + self.GET_2B2T_PLAYTIME_TOP:
             try:
@@ -219,6 +249,23 @@ class Api2b2t:
         for n, i in enumerate(playtime_top["players"]):
             n_in_top = page * page_size + n
             out += f"{n_in_top}. <code>{await self.seconds_to_hms(i['playtimeSeconds'], user_id)}</code> - <code>{i['playerName']}</code>\n"
+        return out
+
+    async def get_printable_kills_top_month(self, query_id):
+
+        saved_state = await self.bot.db.get_saved_state(query_id)
+        assert saved_state["type"] == "kills_top_month"
+        user_id = str(saved_state["user_id"])
+        page = int(saved_state["page"])
+        page_size = int(saved_state["page_size"])
+        pages_count = await self.get_2b2t_tablist_pages_count()
+
+        out = await self.bot.get_translation(user_id, "killsTopMonthHeader") + "\n"
+        kills_top_month = await self.get_kills_top_month_page(page, page_size)
+
+        for n, i in enumerate(kills_top_month["players"]):
+            n_in_top = page * page_size + n
+            out += f"{n_in_top}. ☠️ <code>{html.escape(str(i['count']))}</code> kills - <code>{html.escape(i['playerName'])}</code>\n"
         return out
 
     async def get_player_stats(self, username: str = None, uuid: str = None) -> Dict[str, Any] or None:
@@ -308,9 +355,9 @@ class Api2b2t:
                 raise RuntimeError()
             online = ("\n" + await self.bot.get_translation(user_id, 'isPlayerOnline')) if is_player_online else ''
 
-
             text = await self.bot.get_translation(user_id, "playerStats",
-                                                  data["username"], online,data["username"], data["uuid"], self.format_iso_time(data['firstSeen']),
+                                                  data["username"], online, data["username"], data["uuid"],
+                                                  self.format_iso_time(data['firstSeen']),
                                                   self.format_iso_time(data['lastSeen']), data['chatsCount'],
                                                   data['deathCount'],
                                                   data['killCount'],
@@ -335,8 +382,6 @@ class Api2b2t:
             result.update({"text": text, "show_kbd": False})
             return result
         except self.Api2b2tError as e:
-            self.logger.error("Error in get_printable_player_stats:")
-            self.logger.exception(e)
             text = await self.bot.get_translation(user_id, "error")
             result.update({"text": text, "show_kbd": False})
             return result
@@ -347,44 +392,6 @@ class Api2b2t:
             text = await self.bot.get_translation(user_id, "error")
             result.update({"text": text, "show_kbd": False})
             return result
-
-
-    async def get_2b2t_chat_history(
-                                self,
-                                start_date: datetime,
-                                end_date: datetime,
-                                page: int = 1,
-                                page_size=CHAT_HISTORY_PAGE_SIZE,
-                                sort=None,
-                        ):
-
-        try:
-            base_url = "https://api.2b2t.vc/chats/window"
-            params = {"startDate": start_date.isoformat(timespec='milliseconds'),
-                      "endDate": end_date.isoformat(timespec='milliseconds'), "page": page, "pageSize": page_size}
-
-            if sort is not None:
-                assert sort in ["asc", "desc"]
-                params["sort"] = sort
-
-            async with aiohttp.ClientSession() as session:
-                async with session.get(base_url, params=params) as resp:
-                    data = await resp.json()
-                    return data
-
-        except Exception as e:
-            raise self.Api2b2tError(f"{type(e).__name__}: {e}")
-
-        except requests.exceptions.JSONDecodeError:
-            raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
-
-    async def get_new_2b2t_chat_messages(self):
-        now = datetime.now(tz=timezone.utc)
-        data = await self.get_2b2t_chat_history(self.last_time_get_2b2t_chat_history, now)
-
-        self.last_time_get_2b2t_chat_history = now
-
-        return data
 
     async def get_2b2t_chat_search_page(
             self,
@@ -427,8 +434,8 @@ class Api2b2t:
         except requests.exceptions.JSONDecodeError:
             raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
 
-    async def get_messages_from_player_in_2b2t_chat(self, player_name: str = None, uuid=None, page: int = 1,
-                                                    page_size=10, sort=None, check_player_was_on_2b2t=False):
+    async def get_messages_from_player_in_2b2t_chat(self, username: str = None, uuid=None, page: int = 1,
+                                                    page_size=SEARCH_FROM_PLAYER_PAGE_SIZE, sort=None):
         '''
         :return {
         "chats": [
@@ -443,10 +450,24 @@ class Api2b2t:
         '''
 
         try:
+            if username is None:
+                is_uuid = True
+            elif uuid is None:
+                is_uuid = False
+            else:
+                raise self.Api2b2tError("player and uuid are invalid")
+
+            if is_uuid:
+                username = await self.get_username_from_uuid(uuid)
+            elif not is_uuid:
+                uuid = await self.get_uuid_from_username(username)
+            else:
+                assert False
+
             url = "https://api.2b2t.vc/chats"
             params = {"page": page, "pageSize": page_size}
-            if not player_name is None:
-                params["playerName"] = player_name
+            if not username is None:
+                params["playerName"] = username
             elif not uuid is None:
                 params["uuid"] = uuid
 
@@ -460,11 +481,18 @@ class Api2b2t:
                         raise self.PlayerNeverWasOn2b2tError
                         # return {"chats": [], "total": 0, "pageCount": 0}
                     data = await resp.json()
+
+                    data["username"] = username
+                    data["uuid"] = uuid
                     return data
-        except self.PlayerNeverWasOn2b2tError:
-            raise self.PlayerNeverWasOn2b2tError("PlayerNeverWasOn2b2tError str")
+
         except Exception as e:
-            raise self.Api2b2tError(f"{type(e).__name__}: {e}")
+            if isinstance(e,
+                          (self.PlayerNeverWasOn2b2tError, self.PlayerNotFoundByUsername, self.PlayerNotFoundByUUID)):
+                raise
+            else:
+                raise self.Api2b2tError(f"{type(e).__name__}: {e}")
+
 
         except requests.exceptions.JSONDecodeError:
             raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
@@ -516,28 +544,29 @@ class Api2b2t:
             current_page = saved_state["page"]
             page_size = saved_state["page_size"]
 
-            player_name = saved_state.get("player_username", None)
-            uuid = saved_state.get("player_uuid", None)
+            username = saved_state["player_username"]
+            uuid = saved_state["player_uuid"]
+            use_uuid = saved_state["use_uuid"]
 
-            if not uuid is None:
-                use_uuid = True
+            user_id = saved_state["user_id"]
+
+            result = {"username": username, "uuid": uuid}
+            if use_uuid:
                 player = uuid
             else:
-                use_uuid = False
-                player = player_name
-                assert not player_name is None
+                player = username
 
             if use_uuid:
                 data = await self.get_messages_from_player_in_2b2t_chat(uuid=uuid, page=current_page,
                                                                         page_size=page_size)
             else:
-                data = await self.get_messages_from_player_in_2b2t_chat(player_name=player_name, page=current_page,
+                data = await self.get_messages_from_player_in_2b2t_chat(username=username, page=current_page,
                                                                         page_size=page_size)
 
             pages_count = saved_state["pages_count"] = int(data["pageCount"])
             total = saved_state["total"] = int(data["total"])
-            out = await self.bot.get_translation(saved_state["user_id"], "outputSearchMessagesFromPlayerHeader",
-                                                 "<code>" + html.escape(player) + "</code>",
+            out = await self.bot.get_translation(user_id, "outputSearchMessagesFromPlayerHeader",
+                                                 html.escape(username), html.escape(uuid),
                                                  html.escape(str(current_page)),
                                                  html.escape(str(pages_count)), html.escape(str(total)))
 
@@ -548,13 +577,27 @@ class Api2b2t:
 
             await self.bot.db.update_saved_state(query_id, saved_state)
 
-            return out
-        except self.PlayerNeverWasOn2b2tError:
-            raise self.PlayerNeverWasOn2b2tError
+            result.update({"text": out})
+            return result
 
-        except Exception as e:
+        except self.PlayerNotFoundByUUID:
+            text = await self.bot.get_translation(user_id, "playerNotFoundByUUID", uuid)
+            result.update({"text": text})
+            return result
+        except self.PlayerNotFoundByUsername:
+            text = await self.bot.get_translation(user_id, "playerNotFoundByUsername", username)
+            result.update({"text": text})
+            return result
+        except self.PlayerNeverWasOn2b2tError:
+            text = await self.bot.get_translation(user_id, "playerWasNotOn2b2t", username)
+            result.update({"text": text})
+            return result
+        except self.Api2b2tError as e:
+            self.logger.error("Error in get_printable_messages_from_player_in_2b2t_chat:")
             self.logger.exception(e)
-            raise self.Api2b2tError(f"{type(e).__name__}: {e}")
+            text = await self.bot.get_translation(user_id, "error")
+            result.update({"text": text})
+            return result
 
     async def listen_to_chat_feed(self, callback: Awaitable[dict]):
         """
@@ -669,8 +712,6 @@ class Api2b2t:
 
 async def main():
     pass
-
-
 
 
 if __name__ == '__main__':
