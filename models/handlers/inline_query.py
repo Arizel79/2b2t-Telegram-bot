@@ -1,8 +1,10 @@
 import time
 
-from aiogram.types import InlineQueryResultArticle, InputTextMessageContent, InlineQueryResultPhoto
+from aiogram.types import InlineQueryResultArticle, InputTextMessageContent, InlineQueryResultPhoto, InputMediaPhoto
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import time
 from models.utils.utils import *
+from models.utils.config import *
 import html
 
 
@@ -17,31 +19,51 @@ async def handler_inline_query(self, inline_query):
     self.logger.debug(f"Inline query: {inline_query}")
     q = query = inline_query.query.rstrip()
     results = []
+    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📟 Подробнее...",
+                    url=f"https://t.me/{self.bot_username}?start=ref{user_id}&from_inline"
+                ),
+
+            ]
+        ])
+
+    # InlineKeyboardButton(
+    #     text="🔍 Искать ещё",
+    #     switch_inline_query_current_chat=""
+    # )
 
     if query == "":
         # Если запрос пустой
         results.append(
             InlineQueryResultArticle(
                 id=get_random_id(),
-                title="Введите текст...",
+                title=await self.get_translation(user_id, "inlineEnterPlayerUsernameTitle"),
                 input_message_content=InputTextMessageContent(
                     message_text="---"
                 ),
-                description=""
+                description=await self.get_translation(user_id, "inlineEnterPlayerUsernameSubtitle"),
+        reply_markup=reply_markup
             )
+
         )
+
 
     if query == "":
         status_2b2t = await self.api_2b2t.get_2b2t_info()
         status_2b2t_to_send = await self.api_2b2t.get_printable_2b2t_info(user_id)
+        img_url = URL_2B2T_LOGO_INLINE
         results.append(
             InlineQueryResultArticle(
                 id=get_random_id(),
                 title=await self.get_translation(user_id, "inlineGet2b2tInfoTitle"),
+                thumbnail_url=img_url,
                 input_message_content=InputTextMessageContent(
                     message_text=status_2b2t_to_send
                 ),
-                description=await self.get_translation(user_id, "inlineGet2b2tInfoSubtitle", status_2b2t["regular"])
+                description=await self.get_translation(user_id, "inlineGet2b2tInfoSubtitle", status_2b2t["regular"]),
+        reply_markup=reply_markup
             )
         )
 
@@ -49,23 +71,14 @@ async def handler_inline_query(self, inline_query):
         try:
             if is_valid_minecraft_username(query):
                 uuid = await self.api_2b2t.get_uuid_from_username(query)
+                username = await self.api_2b2t.get_username_from_uuid(uuid)
             elif is_valid_minecraft_uuid(query):
                 username = await self.api_2b2t.get_username_from_uuid(query)
             else:
-                results.append(
-                    InlineQueryResultArticle(
-                        id=get_random_id(),
-                        title=f"player {query} not found",
-                        input_message_content=InputTextMessageContent(
-                            message_text="---"
-                        ),
-                        description=""
-                    )
-                )
                 raise ValueError(f"Player {query} not found")
             username = query
 
-            player_stats_to_send = await self.api_2b2t.get_printable_player_stats(user_id, username=query)
+            player_stats_to_send = await self.api_2b2t.get_printable_player_stats(user_id, username=username)
             try:
                 player_stats = await self.api_2b2t.get_player_stats(username=username)
                 print(player_stats)
@@ -86,25 +99,29 @@ async def handler_inline_query(self, inline_query):
                         message_text=player_stats_to_send["text"]
                     ),
                     description=desc,
-                    thumbnail_url=skin_url
+                    thumbnail_url=skin_url,
+                    reply_markup=reply_markup
 
                 )
             )
+
 
 
         except ValueError as e:
             self.logger.info(f"inline: {e}")
         except (self.api_2b2t.PlayerNotFoundByUsername, self.api_2b2t.PlayerNotFoundByUUID):
-            results.append(
-                InlineQueryResultArticle(
-                    id=get_random_id(),
-                    title=f"Player not found!",
-                    input_message_content=InputTextMessageContent(
-                        message_text=f"Вы искали: {html.escape(query)}"
-                    ),
-                    description=f"Player {query} not found"
-                )
-            )
+            pass
+            #     results.append(
+            #         InlineQueryResultArticle(
+            #             id=get_random_id(),
+            #             title=f"Player not found!",
+            #             input_message_content=InputTextMessageContent(
+            #                 message_text=f"Вы искали: {html.escape(query)}"
+            #             ),
+            #             description=f"Player {query} not found",
+            # reply_markup=reply_markup
+            #         )
+            #     )
         except Exception as e:
             self.logger.error(f"Error in handler_inline_query: {e}")
             self.logger.exception(e)

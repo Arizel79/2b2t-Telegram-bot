@@ -73,6 +73,7 @@ class Stats2b2tBot:
         os.makedirs("logs", exist_ok=True)
         self.logger = setup_logger("bot", "logs/bot.log", logging.INFO)
         self.bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+        self.bot_username = None
         self.dp = Dispatcher()
         self.db = AsyncDatabaseSession()
         self.translator = Translator("translations.json", self.db)
@@ -84,6 +85,7 @@ class Stats2b2tBot:
         self.logger.info("Program started")
 
     async def initialize(self):
+        self.bot_username = (await self.bot.get_me()).username
         await self.db.create_all()
         await self._register_handlers()
 
@@ -114,7 +116,7 @@ class Stats2b2tBot:
         self.dp.callback_query(F.data.startswith(CALLBACK_KILLS_TOP_MONTH))(self.handler_kills_top_month_callback)
 
         self.dp.message(Command("player", "pl", "p"))(self.handler_get_player_stats)
-        self.dp.message(Command("i", "info", "stats", "stat"))(self.handler_get_2b2t_info)
+        self.dp.message(Command("i", "info", "stats", "stat", "status"))(self.handler_get_2b2t_info)
         self.dp.message(Command("tab", "t", "tablist"))(self.handler_get_2b2t_tablist)
         self.dp.message(Command("from"))(self.handler_search_messages_from_player)
 
@@ -177,7 +179,7 @@ class Stats2b2tBot:
                         KeyboardButton(text=await self.get_translation(user_id, "getPlayerStats"))
                     ],
                     [
-                        KeyboardButton(text=await self.get_translation(user_id, "getSettings")),
+                        KeyboardButton(text=await self.get_translation(user_id, "searchChat")),
                         KeyboardButton(text=await self.get_translation(user_id, "getTablist"))
                     ],
                     [
@@ -516,7 +518,6 @@ class Stats2b2tBot:
 
     async def get_player_stats_and_edit_message(self, user_id, query, msg):
         chat_id = msg.chat.id
-        print(3456)
         try:
             answer_ = await self.get_player_stats_answer(query, user_id, register_query_id=True)
 
