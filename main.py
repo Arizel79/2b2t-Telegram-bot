@@ -9,6 +9,7 @@ from aiogram.filters.command import Command
 from aiogram.enums import ParseMode
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineQuery
 from aiogram.types import BufferedInputFile
+import aiogram
 import pytz
 import html
 import time
@@ -529,14 +530,26 @@ class Stats2b2tBot:
                     file=image_buffer.getvalue(),
                     filename="skin.png"
                 )
-
-                await self.bot.send_photo(
-                    chat_id=chat_id,
-                    photo=input_file,
-                    caption=answer_["answer"],
-                                    reply_markup=await self.get_player_stats_keyboard(user_id,
-                                                                                      answer_["query_id"])
-                )
+                message_thread_id  = msg.message_thread_id if msg.message_thread_id else None
+                try:
+                    await self.bot.send_photo(
+                        chat_id=chat_id,
+                        message_thread_id=msg.message_thread_id,
+                        photo=input_file,
+                        caption=answer_["answer"],
+                        reply_markup=await self.get_player_stats_keyboard(user_id, answer_["query_id"])
+                    )
+                except aiogram.exceptions.TelegramBadRequest as e:
+                    if "message thread not found" in str(e) or "TOPIC_CLOSED" in str(e):
+                        # Отправляем в основную тему без указания message_thread_id
+                        await self.bot.send_photo(
+                            chat_id=chat_id,
+                            photo=input_file,
+                            caption=answer_["answer"],
+                            reply_markup=await self.get_player_stats_keyboard(user_id, answer_["query_id"])
+                        )
+                    else:
+                        raise
                 # await self.bot.edit_text(answer_["answer"],
                 #                     reply_markup=await self.get_player_stats_keyboard(user_id,
                 #                                                                       answer_["query_id"]))
