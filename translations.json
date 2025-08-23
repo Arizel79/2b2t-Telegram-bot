@@ -50,7 +50,12 @@
     "nothingHere": "There's nothing here...",
     "playerNotFound": "Player not found!",
     "playerNotFoundByUUID": "Player with uuid <code>{}</code> not found!",
-    "playerNotFoundByUsername": "Player with username <code>{}</code> not found!"
+    "playerNotFoundByUsername": "Player with username <code>{}</code> not found!",
+    "inlineGet2b2tInfoTitle": "2b2t info",
+    "inlineGet2b2tInfoSubtitle": "Queue: {}",
+    "inlineGetPlayerStatsTitle": "{}`s stats",
+    "inlineGetPlayerStatsSubtitlePlayerNeverWasOn2b2t": "{} never was on 2b2t.org",
+    "inlineGetPlayerStatsSubtitlePlayerWasOn2b2t": "{}`s playtime: {}"
 },
   "ru": {
     "langName": "\uD83C\uDDF7\uD83C\uDDFA Русский",

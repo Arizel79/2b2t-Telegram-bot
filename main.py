@@ -1,3 +1,4 @@
+import logging
 from email.message import Message
 
 from aiogram import Dispatcher
@@ -6,7 +7,8 @@ from aiogram import Bot
 from aiogram import F
 from aiogram.filters.command import Command
 from aiogram.enums import ParseMode
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineQuery
+from aiogram.types import BufferedInputFile
 import pytz
 import html
 import time
@@ -39,6 +41,7 @@ from models.handlers.text import *
 from models.utils.live_events import *
 from models.handlers.inline_query import handler_inline_query
 
+import os
 
 class Stats2b2tBot:
     handler_start_message = handler_start_message
@@ -67,16 +70,13 @@ class Stats2b2tBot:
         return await self.translator.get_translation(*kwargs)
 
     def __init__(self, token: str):
+        os.makedirs("logs", exist_ok=True)
+        self.logger = setup_logger("bot", "logs/bot.log", logging.INFO)
         self.bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
         self.dp = Dispatcher()
         self.db = AsyncDatabaseSession()
         self.translator = Translator("translations.json", self.db)
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+
         self.live_events = LiveEvents(LIVE_EVENTS, self)
 
         self.api_2b2t = api.Api2b2t(self)
@@ -424,16 +424,18 @@ class Stats2b2tBot:
         return builder.as_markup()
 
     async def get_player_stats_answer(self, query, user_id, register_query_id=False):
+        page_size = SEARCH_FROM_PLAYER_PAGE_SIZE_IN_CAPTION
         if is_valid_minecraft_uuid(query):
             answer = await self.api_2b2t.get_printable_player_stats(user_id, uuid=query)
             query_id = None
+
             if register_query_id and answer["show_kbd"]:
                 saved_state = {"type": "msgs from player", "player_uuid": query, "player_username": answer["username"],
                                "page": 1,
-                               "user_id": user_id, "page_size": SEARCH_FROM_PLAYER_PAGE_SIZE,
+                               "user_id": user_id, "page_size": page_size,
                                "via_player_stats": True, "use_uuid": True}
                 query_id = await self.db.add_saved_state(saved_state)
-            return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd']}
+            return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd'], "player_username": answer["username"], "player_uuid": answer["uuid"]}
 
 
         elif is_valid_minecraft_username(query):
@@ -442,10 +444,10 @@ class Stats2b2tBot:
             if register_query_id and answer["show_kbd"]:
                 saved_state = {"type": "msgs from player", "player_uuid": answer["uuid"], "player_username": query,
                                "page": 1,
-                               "user_id": user_id, "page_size": SEARCH_FROM_PLAYER_PAGE_SIZE,
+                               "user_id": user_id, "page_size": page_size,
                                "via_player_stats": True, "use_uuid": True}
                 query_id = await self.db.add_saved_state(saved_state)
-            return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd']}
+            return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd'], "player_username": answer["username"], "player_uuid": answer["uuid"]}
         else:
             raise self.api_2b2t.Api2b2tError(f"{query} is not a valid username/uuid")
 
@@ -504,15 +506,40 @@ class Stats2b2tBot:
                 await self.bot.send_message(LOGS_GROUP_ID,
                                             f"{await self.get_printable_user(event.from_user, formatting=True)} callback:\n <code>{html.escape(event.data)}</code>",
                                             message_thread_id=LOGS_GROUP_THREAD_ID)
+        elif type(event) == InlineQuery:
+            user_id = event.from_user.id
+            await self.write_msg(f"{await self.get_printable_user(event.from_user)} inline query: {event.query}")
+            if SEND_LOGS:
+                await self.bot.send_message(LOGS_GROUP_ID,
+                                            f"{await self.get_printable_user(event.from_user, formatting=True)} inline query:\n <code>{html.escape(event.query)}</code>",
+                                            message_thread_id=LOGS_GROUP_THREAD_ID)
 
     async def get_player_stats_and_edit_message(self, user_id, query, msg):
+        chat_id = msg.chat.id
+        print(3456)
         try:
             answer_ = await self.get_player_stats_answer(query, user_id, register_query_id=True)
 
             if answer_["show_kbd"]:
-                await msg.edit_text(answer_["answer"],
+                image_buffer = await self.api_2b2t.download_visage_image(answer_["player_username"], "face", scale=200)
+
+
+                input_file = BufferedInputFile(
+                    file=image_buffer.getvalue(),
+                    filename="skin.png"
+                )
+
+                await self.bot.send_photo(
+                    chat_id=chat_id,
+                    photo=input_file,
+                    caption=answer_["answer"],
                                     reply_markup=await self.get_player_stats_keyboard(user_id,
-                                                                                      answer_["query_id"]))
+                                                                                      answer_["query_id"])
+                )
+                # await self.bot.edit_text(answer_["answer"],
+                #                     reply_markup=await self.get_player_stats_keyboard(user_id,
+                #                                                                       answer_["query_id"]))
+                await self.bot.delete_message(msg.chat.id, msg.message_id)
             else:
                 await msg.edit_text(answer_["answer"])
 
@@ -529,6 +556,11 @@ class Stats2b2tBot:
             self.logger.error(f"Error in get_player_stats_and_edit_message: {e}")
             self.logger.exception(e)
             await msg.edit_text(await self.get_translation(msg.from_user.id, "error"))
+    async def edit_message_text_or_caption(self, message, new_text, **kwargs):
+        if message.text:
+            await message.edit_text(new_text, **kwargs)
+        elif message.caption:
+            await message.edit_caption(caption=new_text, **kwargs)
 
     async def get_settings_keyboard(self, user_id):
         builder = InlineKeyboardBuilder()

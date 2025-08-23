@@ -1,9 +1,16 @@
 import json
+import logging
+
 import requests
+
+from models.utils.config import DEFAULT_LANG_CODE
+from models.utils.utils import *
+
 
 class Translator:
     def __init__(self, translations_file="translations.json", db=None):
         self.db = db
+        self.logger = setup_logger("translator", "logs/translator.log", logging.INFO)
         with open(translations_file, "r", encoding="utf-8") as f:
             self.translations = json.loads(f.read())
 
@@ -20,16 +27,16 @@ class Translator:
             data = await self.db.get_user_stats(user_id)
             lang = data["lang"]
         except KeyError:
-            print(f"TRANSLATION KeyError id={user_id}", data)
-            return
-
+            self.logger.error(f"Getting lang KeyError user_id={user_id}; user_data={data}")
+            lang = DEFAULT_LANG_CODE
 
         try:
             return self.translations[lang][what].format(*format_args)
         except KeyError:
-            error = f"Error.\n\n KeyError(translation NOT FOUND) lang={lang}, what={what} !!!"
+            error = f"Translation error: '{what}' NOT FOUND (KeyError) lang={lang}"
+            self.logger.error(error)
             return error
         except IndexError:
-            error = f"Error.\n\n IndexError(translation format_args not correct N) lang={lang}, what={what}, format_args={format_args} !!!"
+            error = f"Translation error: '{what}' translation format_args not correct lang={lang}, format_args={format_args}"
             print(error)
             return error

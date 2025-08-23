@@ -45,6 +45,7 @@ class Api2b2t:
         self.cached_2b2t_deaths_top_month = None
 
         self.last_time_get_2b2t_chat_history = datetime.now(tz=timezone.utc)
+        self.mc_skins_api_base = "https://mineskin.eu"
 
     class Api2b2tError(Exception):
         pass
@@ -241,7 +242,7 @@ class Api2b2t:
         user_id = str(saved_state["user_id"])
         page = int(saved_state["page"])
         page_size = int(saved_state["page_size"])
-        pages_count = await self.get_2b2t_tablist_pages_count()
+        pages_count = await self.get_playtime_top_pages_count()
 
         out = await self.bot.get_translation(user_id, "playtimeTopHeader") + "\n"
         pttop = playtime_top = await self.get_playtime_top_page(page, page_size)
@@ -258,7 +259,7 @@ class Api2b2t:
         user_id = str(saved_state["user_id"])
         page = int(saved_state["page"])
         page_size = int(saved_state["page_size"])
-        pages_count = await self.get_2b2t_tablist_pages_count()
+        pages_count = await self.get_kills_top_month_pages_count()
 
         out = await self.bot.get_translation(user_id, "killsTopMonthHeader") + "\n"
         kills_top_month = await self.get_kills_top_month_page(page, page_size)
@@ -287,8 +288,6 @@ class Api2b2t:
             uuid = await self.get_uuid_from_username(username)
         else:
             assert False
-
-        self.logger.info(f"!! uuid={uuid}; username={username};")
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -542,7 +541,9 @@ class Api2b2t:
         try:
             saved_state = await self.bot.db.get_saved_state(query_id)
             current_page = saved_state["page"]
+            via_player_stats = saved_state.get("via_player_stats", False)
             page_size = saved_state["page_size"]
+
 
             username = saved_state["player_username"]
             uuid = saved_state["player_uuid"]
@@ -708,6 +709,27 @@ class Api2b2t:
 
                     else:
                         raise self.Api2b2tError(f"HTTP status: {response.status}; uuid={uuid}")
+
+    async def get_visage_urls(self, username: str, scale: int=1000) -> dict:
+        """Получает скины через Visage API"""
+        return {
+            "face": f"{self.mc_skins_api_base}/helm/{username}/{scale}.png",
+            "front": f"{self.mc_skins_api_base}/armor/body/{username}/{scale}.png",
+            "full": f"{self.mc_skins_api_base}/armor/body/{username}/{scale}.png",
+            "bust": f"{self.mc_skins_api_base}/armor/bust/{username}/{scale}.png"
+        }
+
+    async def download_visage_image(self, username: str, type: str = "face", scale: int=1000) -> io.BytesIO:
+        """Скачивает из Visage"""
+        urls = await self.get_visage_urls(username, scale=scale)
+        skin_url = urls.get(type, urls["face"])
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(skin_url) as response:
+                if response.status == 200:
+                    image_data = await response.read()
+                    return io.BytesIO(image_data)
+        return None
 
 
 async def main():

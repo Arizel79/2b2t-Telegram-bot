@@ -14,8 +14,6 @@ async def handler_get_player_stats(self, message: types.Message, register_msg: b
     if not await self.is_handler_msgs(message.from_user.id):
         return
 
-
-
     lang = (await self.db.get_user_stats(message.from_user.id))["lang"]
     try:
         query = message.text.split(maxsplit=1)[1] if message.text.startswith("/") else message.text
