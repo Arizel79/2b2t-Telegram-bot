@@ -19,15 +19,15 @@ async def handler_inline_query(self, inline_query):
     self.logger.debug(f"Inline query: {inline_query}")
     q = query = inline_query.query.rstrip()
     results = []
-    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="📟 Подробнее...",
-                    url=f"https://t.me/{self.bot_username}?start=ref{user_id}&from_inline"
-                ),
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text=await self.get_translation(user_id, "inlineOpenBot"),
+                url=f"https://t.me/{self.bot_username}?start=ref{user_id}&from_inline"
+            ),
 
-            ]
-        ])
+        ]
+    ])
 
     # InlineKeyboardButton(
     #     text="🔍 Искать ещё",
@@ -44,11 +44,10 @@ async def handler_inline_query(self, inline_query):
                     message_text="---"
                 ),
                 description=await self.get_translation(user_id, "inlineEnterPlayerUsernameSubtitle"),
-        reply_markup=reply_markup
+                reply_markup=reply_markup
             )
 
         )
-
 
     if query == "":
         status_2b2t = await self.api_2b2t.get_2b2t_info()
@@ -63,7 +62,7 @@ async def handler_inline_query(self, inline_query):
                     message_text=status_2b2t_to_send
                 ),
                 description=await self.get_translation(user_id, "inlineGet2b2tInfoSubtitle", status_2b2t["regular"]),
-        reply_markup=reply_markup
+                reply_markup=reply_markup
             )
         )
 
@@ -110,18 +109,17 @@ async def handler_inline_query(self, inline_query):
         except ValueError as e:
             self.logger.info(f"inline: {e}")
         except (self.api_2b2t.PlayerNotFoundByUsername, self.api_2b2t.PlayerNotFoundByUUID):
-            pass
-            #     results.append(
-            #         InlineQueryResultArticle(
-            #             id=get_random_id(),
-            #             title=f"Player not found!",
-            #             input_message_content=InputTextMessageContent(
-            #                 message_text=f"Вы искали: {html.escape(query)}"
-            #             ),
-            #             description=f"Player {query} not found",
-            # reply_markup=reply_markup
-            #         )
-            #     )
+            results.append(
+                InlineQueryResultArticle(
+                    id=get_random_id(),
+                    title=f"Player not found!",
+                    input_message_content=InputTextMessageContent(
+                        message_text=f"Вы искали: {html.escape(query)}"
+                    ),
+                    description=f"Player {query} not found",
+                    reply_markup=reply_markup
+                )
+            )
         except Exception as e:
             self.logger.error(f"Error in handler_inline_query: {e}")
             self.logger.exception(e)

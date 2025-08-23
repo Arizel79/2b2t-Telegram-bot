@@ -503,7 +503,7 @@ class Api2b2t:
             time_ = ""
         if bool(message.get("playerName", False)):
             return f'💬 <code>{html.escape(message["playerName"])}</code> {time_}: <code>{html.escape(message["chat"])}</code>'
-        return f'💬 {time_ + ": " if with_time else ''}<code>{html.escape(message["chat"])}</code>'
+        return f'💬 {time_ + ": " if with_time else ""}<code>{html.escape(message["chat"])}</code>'
 
     async def get_printable_2b2t_chat_search_page(self, query_id):
         try:

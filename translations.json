@@ -57,8 +57,8 @@
     "inlineGetPlayerStatsSubtitlePlayerNeverWasOn2b2t": "{} never was on 2b2t.org",
     "inlineGetPlayerStatsSubtitlePlayerWasOn2b2t": "{}`s playtime: {}",
     "inlineEnterPlayerUsernameTitle": "Enter name of 2b2t player",
-    "inlineEnterPlayerUsernameSubtitle": "To find out his statistics on 2b2t"
-
+    "inlineEnterPlayerUsernameSubtitle": "To find out his statistics on 2b2t",
+    "inlineOpenBot": "\uD83D\uDCDF More..."
 },
   "ru": {
     "langName": "\uD83C\uDDF7\uD83C\uDDFA Русский",
@@ -118,6 +118,7 @@
     "inlineGetPlayerStatsSubtitlePlayerNeverWasOn2b2t": "{} никогда не был на 2b2t.org",
     "inlineGetPlayerStatsSubtitlePlayerWasOn2b2t": "Игровое время {}: {}",
     "inlineEnterPlayerUsernameTitle": "Введите имя игрока 2b2t",
-    "inlineEnterPlayerUsernameSubtitle": "Чтобы узнать его статистику на 2b2t"
+    "inlineEnterPlayerUsernameSubtitle": "Чтобы узнать его статистику на 2b2t",
+    "inlineOpenBot": "\uD83D\uDCDF Подробнее..."
   }
 }
