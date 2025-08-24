@@ -40,7 +40,8 @@ from models.handlers.callback_tablist import *
 from models.handlers.callback_get_playtime_top import *
 from models.handlers.text import *
 from models.utils.live_events import *
-from models.handlers.inline_query import handler_inline_query
+from models.handlers.inline_query import *
+from models.handlers.live_events import *
 
 import os
 
@@ -79,7 +80,8 @@ class Stats2b2tBot:
         self.db = AsyncDatabaseSession()
         self.translator = Translator("translations.json", self.db)
 
-        self.live_events = LiveEvents(LIVE_EVENTS, self)
+
+        self.live_events_handler = LiveEventsManager(self)
 
         self.api_2b2t = api.Api2b2t(self)
 
@@ -443,6 +445,7 @@ class Stats2b2tBot:
 
         elif is_valid_minecraft_username(query):
             answer = await self.api_2b2t.get_printable_player_stats(user_id, username=query)
+            self.logger.info(f"Ans: {answer}")
             query_id = None
             if register_query_id and answer["show_kbd"]:
                 saved_state = {"type": "msgs from player", "player_uuid": answer["uuid"], "player_username": query,
@@ -481,7 +484,6 @@ class Stats2b2tBot:
                 await self.db.update_lang(user_id, DEFAULT_LANG_CODE)
 
         if type(event) == types.Message:
-
             await self.write_msg(
                 f"{await self.get_printable_user(event.from_user, from_chat=event.chat)}: {event.text}")
 
@@ -591,23 +593,26 @@ class Stats2b2tBot:
             return True
         return False
 
-    async def run(self) -> None:
+    async def run_bot(self) -> None:
         await self.dp.start_polling(self.bot)
+
+    async def run(self) -> None:
+        bot_task = asyncio.create_task(self.run_bot())
+        live_events_tasks = await self.live_events_handler.get_tasks()
+        tasks = [bot_task, *live_events_tasks]
+        try:
+            await asyncio.gather(*tasks)
+        except asyncio.CancelledError as e:
+            self.logger.info(f"CancelledError")
+            self.logger.exception(e)
 
 
 async def main():
     bot = Stats2b2tBot(TELEGRAM_BOT_TOKEN)
     await bot.initialize()
 
-    bot_task = asyncio.create_task(bot.run())
-    tasks = [bot_task]
-    tasks += bot.live_events.tasks
-
     try:
-        await asyncio.gather(*tasks)
-    except asyncio.CancelledError:
-        pass  # Ожидаемое завершение
-
+        await bot.run()
     finally:
         print("Bot finished")
 

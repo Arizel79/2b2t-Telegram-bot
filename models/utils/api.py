@@ -355,7 +355,7 @@ class Api2b2t:
             online = ("\n" + await self.bot.get_translation(user_id, 'isPlayerOnline')) if is_player_online else ''
 
             text = await self.bot.get_translation(user_id, "playerStats",
-                                                  data["username"], online, data["username"], data["uuid"],
+                                                  self.get_player_link(data["username"]), online, data["username"], data["uuid"],
                                                   self.format_iso_time(data['firstSeen']),
                                                   self.format_iso_time(data['lastSeen']), data['chatsCount'],
                                                   data['deathCount'],
@@ -497,13 +497,68 @@ class Api2b2t:
             raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
 
     def format_chat_message(self, message, with_time=True):
+        self.logger.info(f"Formatting {message}")
         if with_time:
             time_ = f"[<code>{html.escape(self.format_iso_time(message['time']))}</code>]"
         else:
             time_ = ""
         if bool(message.get("playerName", False)):
-            return f'💬 <code>{html.escape(message["playerName"])}</code> {time_}: <code>{html.escape(message["chat"])}</code>'
-        return f'💬 {time_ + ": " if with_time else ""}<code>{html.escape(message["chat"])}</code>'
+            uuid = message.get("playerUuid") or message.get("uuid")
+            player = self.get_player_link(message["playerName"], uuid)
+            return f'💬 {player} {time_}: <code>{html.escape(message["chat"])}</code>'
+        else:
+            return f'💬 {time_ + ": " if with_time else ""}<code>{html.escape(message["chat"])}</code>'
+
+    def format_death_message(self, message, with_time=True):
+        if with_time:
+            time_ = f"[<code>{html.escape(self.format_iso_time(message['time']))}</code>]"
+        else:
+            time_ = ""
+        victim = self.get_player_link(message["victimPlayerName"], message["victimPlayerUuid"])
+        death_message = message["deathMessage"]
+        if not message["killerPlayerName"] is None:
+            killer = self.get_player_link(message["killerPlayerName"], message["killerPlayerUuid"])
+            return f'☠️ {time_} {killer} killed {victim}: <code>{html.escape(death_message)}</code>'
+        else:
+            return f'☠️ {time_} {victim} death: <code>{html.escape(death_message)}</code>'
+
+    def format_connection_message(self, message, with_time=True):
+        if with_time:
+            time_ = f"[<code>{html.escape(self.format_iso_time(message['time']))}</code>]"
+        else:
+            time_ = ""
+        type_ = message["connection"]
+        player = self.get_player_link(message["playerName"], message["playerUuid"])
+        if type_ == "JOIN":
+            return f'▶️ {time_ + " " if with_time else ""} {player} join'
+        else:
+            return f'⬅️ {time_ + " " if with_time else ""} {player} left'
+
+    def get_namemc_link(self, username, uuid=None, formatting=True):
+        url = f"https://namemc.com/{username}"
+        if formatting:
+            out = f"<a href='{url}'>{username}</a>"
+        else:
+            out = f"{url}"
+        return out
+
+    def get_player_stats_link(self, player, formatting=True):
+
+        url = f"https://t.me/{self.bot.bot_username}?start=pl_{player}"
+        if formatting:
+            out = f"<b><a href='{url}'>{player}</a></b>"
+        else:
+            out = f"{url}"
+        return out
+
+    def get_player_link(self, username, uuid=None, formatting=True):
+        return self.get_player_stats_link(username,formatting)
+        # if formatting:
+        #     out = f"<code>{html.escape(username)}</code>"
+        # else:
+        #     out = f"{username}"
+        # return out
+
 
     async def get_printable_2b2t_chat_search_page(self, query_id):
         try:
@@ -599,20 +654,20 @@ class Api2b2t:
             text = await self.bot.get_translation(user_id, "error")
             result.update({"text": text})
             return result
-
-    async def listen_to_chat_feed(self, callback: Awaitable[dict]):
-        """
-        Подключается к SSE-потоку /feed/chats и вызывает callback при новых сообщениях.
-        """
-        url = "https://api.2b2t.vc/feed/chats"
-
+    async def safe_listen_sse_stream(self, url, callback: Awaitable):
+        while True:
+            try:
+                await self.listen_sse_stream(url, callback)
+            except Exception as e:
+                self.logger.error(f"Error in safe_listen_sse_stream: {e}")
+                self.logger.exception(e)
+    async def listen_sse_stream(self, url, callback: Awaitable):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url, headers={"Accept": "text/event-stream"}) as resp:
                     if resp.status != 200:
                         raise self.Api2b2tError(f"Error: HTTP {resp.status}")
 
-                    # Читаем поток событий
                     async for line in resp.content:
                         if line.startswith(b"data:"):
                             try:
@@ -623,7 +678,18 @@ class Api2b2t:
 
 
             except Exception as e:
-                raise self.Api2b2tError(f"Ошибка в SSE-подключении: {e}")
+                self.logger.error(f"Error in listen_sse_steam: {e}")
+                self.logger.exception(e)
+                raise self.Api2b2tError(f"SSE-connection error: {e}")
+
+    async def listen_to_chats_feed(self, callback: Awaitable[dict]):
+        await self.safe_listen_sse_stream("https://api.2b2t.vc/feed/chats", callback)
+    async def listen_to_connections_feed(self, callback: Awaitable[dict]):
+        await self.safe_listen_sse_stream("https://api.2b2t.vc/feed/connections", callback)
+
+    async def listen_to_deaths_feed(self, callback: Awaitable[dict]):
+        await self.safe_listen_sse_stream("https://api.2b2t.vc/feed/deaths", callback)
+
 
     async def seconds_to_hms(self, seconds: int, user_id) -> str:
         """

@@ -8,6 +8,12 @@ async def handler_start_message(self, message: types.Message, register_msg=True)
     if not await self.is_handler_msgs(message.from_user.id):
         return
 
+    self.logger.info(f"Bot start command: {message.text}")
+    cmd = message.text.split()[1]
+    if cmd.startswith("pl_"):
+        await self.handler_get_player_stats(message, register_msg=False)
+        return
+
     await message.reply(
         await self.get_translation(
             message.from_user.id,

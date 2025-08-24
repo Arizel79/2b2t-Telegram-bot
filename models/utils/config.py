@@ -8,7 +8,6 @@ load_dotenv()
 
 configs = json.load(open("config.json", "r"))
 
-
 TELEGRAM_BOT_TOKEN = configs["configs"]["telegram_bot_token"]
 ADMIN_ID =  configs["configs"]["admin_telegram_id"]
 
@@ -17,6 +16,8 @@ LOGS_GROUP_ID= configs["send_bot_logs"]["chat_id"]
 LOGS_GROUP_THREAD_ID = configs["send_bot_logs"]["supergroup_thread_id"]
 
 LIVE_EVENTS = configs["send_live_events_to_telegram_chat"]
+MAX_TIME_BETWEEN_SENDING_TO_MY_CHATS = configs["max_time_between_sending_to_my_chats"]
+MAX_EVENTS_IN_QUEUE = configs["max_events_in_queue"]
 
 assert TELEGRAM_BOT_TOKEN != "", "TELEGRAM_BOT_TOKEN is invalid"
 
