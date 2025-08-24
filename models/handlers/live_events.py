@@ -11,7 +11,7 @@ class LiveEventsManager:
     MAX_TIME_BETWEEN_SENDING_TO_MY_CHATS = MAX_TIME_BETWEEN_SENDING_TO_MY_CHATS # sec
     MAX_EVENTS_IN_QUEUE = MAX_EVENTS_IN_QUEUE
     def __init__(self, bot):
-        self.logger = setup_logger("live_events", "logs/live_events.log", logging.INFO)
+        self.logger = setup_logger("live_events", "logs/live_events.log", logging.DEBUG)
         self.bot = bot
         self.tasks = [asyncio.create_task(self.task_live_event_chat_messages()),
                       asyncio.create_task(self.task_live_event_connections()),
@@ -32,12 +32,12 @@ class LiveEventsManager:
     async def on_chat_message(self, event):
         event["type"] = "chat_message"
         await self.on_live_event(event)
-        # self.logger.info("chat message: "+ self.bot.api_2b2t.format_chat_message(event))
+        self.logger.debug("chat message: "+ self.bot.api_2b2t.format_chat_message(event))
 
     async def on_death_message(self, event):
         event["type"] = "death_message"
         await self.on_live_event(event)
-        # self.logger.info("death message: "+ self.bot.api_2b2t.format_death_message(event))
+        self.logger.debug("death message: "+ self.bot.api_2b2t.format_death_message(event))
     async def on_connection_message(self, event):
         event["type"] = "connection_message"
         await self.on_live_event(event)
@@ -62,7 +62,7 @@ class LiveEventsManager:
                     else:
                         text += str(ev) + "\n\n"  # text = f"{self.bot.api_2b2t.format_chat_message(event, with_time=False)}"
             if text.strip() != "":
-                self.logger.info(f"Sending to my chat {i['chat_id']}: \n{text}")
+                self.logger.debug(f"Sending to my chat {i['chat_id']}: \n{text}")
                 await self.bot.bot.send_message(i["chat_id"], text,
                                             message_thread_id=i["logs_supergroup_thread_id"],
                                             link_preview_options=LinkPreviewOptions(is_disabled=True))

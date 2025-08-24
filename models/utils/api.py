@@ -497,7 +497,6 @@ class Api2b2t:
             raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
 
     def format_chat_message(self, message, with_time=True):
-        self.logger.info(f"Formatting {message}")
         if with_time:
             time_ = f"[<code>{html.escape(self.format_iso_time(message['time']))}</code>]"
         else:
@@ -530,8 +529,8 @@ class Api2b2t:
         type_ = message["connection"]
         player = self.get_player_link(message["playerName"], message["playerUuid"])
         if type_ == "JOIN":
-            return f'▶️ {time_ + " " if with_time else ""} {player} join'
-        else:
+            return f'➡️ {time_ + " " if with_time else ""} {player} joined'
+        elif type_ == "LEAVE":
             return f'⬅️ {time_ + " " if with_time else ""} {player} left'
 
     def get_namemc_link(self, username, uuid=None, formatting=True):
