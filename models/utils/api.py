@@ -504,7 +504,7 @@ class Api2b2t:
         if bool(message.get("playerName", False)):
             uuid = message.get("playerUuid") or message.get("uuid")
             player = self.get_player_link(message["playerName"], uuid)
-            return f'💬 {player} {time_}: <code>{html.escape(message["chat"])}</code>'
+            return f'💬 {time_} {player}: <code>{html.escape(message["chat"])}</code>'
         else:
             return f'💬 {time_ + ": " if with_time else ""}<code>{html.escape(message["chat"])}</code>'
 
