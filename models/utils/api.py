@@ -529,9 +529,9 @@ class Api2b2t:
         type_ = message["connection"]
         player = self.get_player_link(message["playerName"], message["playerUuid"])
         if type_ == "JOIN":
-            return f'➡️ {time_ + " " if with_time else ""} {player} joined'
+            return f'➡️ {time_ + " " if with_time else ""}{player} joined'
         elif type_ == "LEAVE":
-            return f'⬅️ {time_ + " " if with_time else ""} {player} left'
+            return f'⬅️ {time_ + " " if with_time else ""}{player} left'
 
     def get_namemc_link(self, username, uuid=None, formatting=True):
         url = f"https://namemc.com/{username}"
