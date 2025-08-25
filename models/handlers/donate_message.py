@@ -9,5 +9,5 @@ async def handler_donate_message(self, message: types.Message, register_msg=True
         return
     donate_text = await self.get_translation(message.from_user.id, "donateText")
     await message.reply(
-        donate_text, disable_web_page_preview=True
+        donate_text, disable_web_page_preview=True, reply_markup=await self.get_reply_keyboard_by_message(message)
     )

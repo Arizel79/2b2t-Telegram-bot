@@ -1,12 +1,16 @@
+import asyncio
 from aiogram import types
 from aiogram.utils.markdown import html_decoration as hd
-
 
 async def handler_start_message(self, message: types.Message, register_msg=True) -> None:
     if register_msg:
         await self.on_event(message)
-    if not await self.is_handler_msgs(message.from_user.id):
-        return
+    for i in range(500):
+        if not await self.is_handler_msgs(message.from_user.id):
+            self.logger.debug("Waiting before user selected lang...")
+        else:
+            break
+        await asyncio.sleep(1)
 
     self.logger.info(f"Bot start command: {message.text}")
     try:

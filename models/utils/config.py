@@ -45,3 +45,5 @@ LANG_CODES = ["en", "ru"]
 DEFAULT_LANG_CODE = "en"
 
 URL_2B2T_LOGO_INLINE = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Old_2b2t_logo.svg/2048px-Old_2b2t_logo.svg.png"
+
+CHAT_LIVE_EVENTS_LINK = "https://t.me/+L0TprIr8zmY3MDBi"

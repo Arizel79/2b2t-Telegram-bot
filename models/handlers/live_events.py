@@ -8,7 +8,7 @@ from models.utils.config import *
 
 class LiveEventsManager:
     def __init__(self, bot):
-        self.logger = setup_logger("live_events", "logs/live_events.log", logging.DEBUG)
+        self.logger = setup_logger("live_events", "logs/live_events.log", logging.INFO)
         self.bot = bot
         self.my_live_events = LIVE_EVENTS
         self.queue_to_notify_users = asyncio.Queue()
@@ -43,16 +43,18 @@ class LiveEventsManager:
     async def on_chat_message(self, event):
         event["type"] = "chat_message"
         await self.on_live_event(event)
-        self.logger.debug("chat message: " + self.bot.api_2b2t.format_chat_message(event))
+        self.logger.debug("chat message: " + await self.bot.api_2b2t.format_chat_message(event))
 
     async def on_death_message(self, event):
         event["type"] = "death_message"
         await self.on_live_event(event)
-        self.logger.debug("death message: " + self.bot.api_2b2t.format_death_message(event))
+        self.logger.debug("death message: " + await self.bot.api_2b2t.format_death_message(event))
 
     async def on_connection_message(self, event):
         event["type"] = "connection_message"
         await self.on_live_event(event)
+        self.logger.debug("connection message: " + await self.bot.api_2b2t.format_connection_message(event))
+
 
     async def send_events_for_chat(self, chat_config):
         lst = []
@@ -63,11 +65,11 @@ class LiveEventsManager:
         text = ""
         for ev in lst:
             if ev["type"] == "chat_message":
-                text += f"{self.bot.api_2b2t.format_chat_message(ev)}\n\n"
+                text += f'{await self.bot.api_2b2t.format_chat_message(ev, only_time=True, to_tz=chat_config["timezone"], lang=chat_config["lang"])}\n\n'
             elif ev["type"] == "death_message":
-                text += f"{self.bot.api_2b2t.format_death_message(ev)}\n\n"
+                text += f'{await self.bot.api_2b2t.format_death_message(ev, only_time=True, to_tz=chat_config["timezone"], lang=chat_config["lang"])}\n\n'
             elif ev["type"] == "connection_message":
-                text += f"{self.bot.api_2b2t.format_connection_message(ev)}\n\n"
+                text += f'{await self.bot.api_2b2t.format_connection_message(ev, only_time=True, to_tz=chat_config["timezone"], lang=chat_config["lang"])}\n\n'
             else:
                 text += str(ev) + "\n\n"
 
@@ -91,7 +93,7 @@ class LiveEventsManager:
                 send = queue_full or (timeout and queue_not_empty)
 
                 if send:
-                    self.logger.info(
+                    self.logger.debug(
                         f"Preparing to send events to chat {chat_config['chat_id']}: "
                         f"queue_full={queue_full} ({chat_config['queue'].qsize()}); "
                         f"timeout={timeout}; queue_not_empty={queue_not_empty}"

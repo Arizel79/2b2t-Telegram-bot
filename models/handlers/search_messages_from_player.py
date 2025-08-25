@@ -21,7 +21,8 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
         if len(lst) > 1:
             query = " ".join(lst[1:])
         else:
-            await message.reply(await self.get_translation(message.from_user.id, "searchMessagesFromPlayerCommandUsage"))
+            await message.reply(await self.get_translation(message.from_user.id, "searchMessagesFromPlayerCommandUsage"),
+                                reply_markup=await self.get_reply_keyboard_by_message(message))
             return
     else:
         query = message.text
@@ -38,7 +39,7 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
             if uuid:
                 saved_state["use_uuid"] = False
         except self.api_2b2t.PlayerNotFound:
-            await message.reply(await self.get_translation(message.from_user.id, "playerNotFoundByUsername", query))
+            await message.reply(await self.get_translation(message.from_user.id, "playerNotFoundByUsername", query), reply_markup=await self.get_reply_keyboard_by_message(message))
             return
 
     elif is_valid_minecraft_uuid(query):
@@ -48,7 +49,7 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
             if username:
                 saved_state["use_uuid"] = True
         except self.api_2b2t.PlayerNotFound:
-            await message.reply(await self.get_translation(message.from_user.id, "playerNotFoundByUUID", query))
+            await message.reply(await self.get_translation(message.from_user.id, "playerNotFoundByUUID", query), reply_markup=await self.get_reply_keyboard_by_message(message))
             return
 
     else:

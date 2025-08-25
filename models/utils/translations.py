@@ -29,14 +29,20 @@ class Translator:
         except KeyError:
             self.logger.error(f"Getting lang KeyError user_id={user_id}; user_data={data}")
             lang = DEFAULT_LANG_CODE
+        return await self.get_get_translation_by_lang(lang, what, *format_args)
 
+    async def get_get_translation_by_lang(self, lang, what: str, *format_args):
         try:
             return self.translations[lang][what].format(*format_args)
-        except KeyError:
+        except KeyError as e:
+            self.logger.error(f"Error in get_get_translation_by_lang: {e}")
+            self.logger.exception(e)
             error = f"Translation error: '{what}' NOT FOUND (KeyError) lang={lang}"
-            self.logger.error(error)
+
             return error
-        except IndexError:
+        except IndexError as e:
+            self.logger.error(f"Error in get_get_translation_by_lang: {e}")
+            self.logger.exception(e)
             error = f"Translation error: '{what}' translation format_args not correct lang={lang}, format_args={format_args}"
             print(error)
             return error

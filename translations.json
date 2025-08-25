@@ -9,7 +9,7 @@
     "unknownError": "❌❌❌ <b>Unknown error</b> ❌❌❌\nPlease try again later",
     "waitPlease": "⏳ <b>Please wait</b>\nProcessing your request...",
     "langSelected": "Language set to: \uD83C\uDDFA\uD83C\uDDF8 English",
-    "playerStats": "<b>\uD83D\uDCCA Statistics of <code>{}</code> on 2b2t</b>\n{}\n\uD83D\uDCDD Username: <code>{}</code>\n\uD83C\uDD94 UUID: <code>{}</code>\n\uD83D\uDCC5 First join: <code>{}</code>\n\uD83D\uDCC5 Last join: <code>{}</code>\n\uD83D\uDCAC Chat messages: <code>{}</code>\n\uD83D\uDC80 Deaths: <code>{}</code>\n☠\uFE0F Kills: <code>{}</code>\n➡\uFE0F Joined server: <code>{}</code> times\n⬅\uFE0F Left server: <code>{}</code> times\n\uD83D\uDD52 Playtime: <code>{}</code>\n\uD83D\uDD52 Monthly playtime: <code>{}</code>\n{}",
+    "playerStats": "<b>\uD83D\uDCCA Statistics of <code>{}</code> on 2b2t</b>\n{}\n\uD83D\uDCDD Username: <code>{}</code>\n\uD83C\uDD94 UUID: <code>{}</code>\n\uD83D\uDCC5 First join: {}\n\uD83D\uDCC5 Last join: {}\n\uD83D\uDCAC Chat messages: <code>{}</code>\n\uD83D\uDC80 Deaths: <code>{}</code>\n☠\uFE0F Kills: <code>{}</code>\n➡\uFE0F Joined server: <code>{}</code> times\n⬅\uFE0F Left server: <code>{}</code> times\n\uD83D\uDD52 Playtime: <code>{}</code>\n\uD83D\uDD52 Monthly playtime: <code>{}</code>\n{}",
     "playerWasNotOn2b2t": "<code>{}</code> has never joined 2b2t",
     "prioActive": "⭐\uFE0F Priority queue is active",
     "isPlayerOnline": "\uD83D\uDFE2 Player is online",
@@ -59,12 +59,17 @@
     "inlineGetPlayerStatsSubtitlePlayerWasOn2b2t": "{}`s playtime: {}",
     "inlineEnterPlayerUsernameTitle": "Enter name of 2b2t player",
     "inlineEnterPlayerUsernameSubtitle": "To find out his statistics on 2b2t",
-    "inlineOpenBot": "\uD83D\uDCDF More..."
+    "inlineOpenBot": "\uD83D\uDCDF More...",
+    "playerChatMessage": "\uD83D\uDCAC {}{}: {}",
+    "playerNormalDeath": "\uD83D\uDC80 {}{} died: {}",
+    "playerKilledByPlayer": "☠ {} {} killed {}: {}",
+    "playerJoinServer": "➕ {}{} join server",
+        "playerLeftServer": "➖ {}{} left server"
 },
   "ru": {
     "langName": "\uD83C\uDDF7\uD83C\uDDFA Русский",
-    "startMessage": "<b>Привет, {}!</b>\nЯ бот для получения различной информации о сервере 2b2t и его игроках.\n\n❓ Мои возможности:\n• Показать статистику игрока на 2b2t: <code>/pl игрок</code>\n• Показать текущее состояние 2b2t: /status\n• Выполнить поиск сообщений в чате 2b2t: <code>/s текст</code>\n• \n/help - узнать больше",
-    "helpMessage": "<b>Справка</b>\nОсновные команды:\n• /help - Показать эту справку\n\nСтатистика сервера:\n• /stats (или /i, /info) - Текущий статус 2b2t\n• /tablist (или /t, /tab) - Список игроков онлайн\n\nСтатистика игроков:\n• <code>/player name</code> (или /pl, /p) - Найти статистику игрока\nПример: <code>/player xcc2</code>\n• /playtime_top - Топ 1000 игркоков с самым большим временем игры на 2b2t\n\nСообщения чата 2b2t:\n• <code>/search query</code> - выполнить поиск по чату 2b2t с запросом <code>query</code>\n• <code>/from player</code> - выполнить поиск по сообщения от игрока <code>player</code>",
+    "startMessage": "<b>Привет, {}!</b>\nЯ бот для получения различной информации о сервере 2b2t и его игроках.\n\n❓ Мои возможности:\n• <code>/player F_i_l_i_n</code> - Показать статистику игрока на 2b2t\n• /status - Показать текущее состояние 2b2t\n• <code>/search Hello</code> - Выполнить поиск сообщений в чате 2b2t\n• /players_list - Показать список онлайн игроков 2b2t\n\n/help - подробнее\n\nP. S. Наша группа - @the2b2t",
+    "helpMessage": "<b>\uD83D\uDEE0 Справка по боту</b>\n\nЯ бот для получения различной информации о сервере 2b2t и его игроках. Используй клавиатуру или команды ниже.\n\n<b>\uD83D\uDCCA Статистика сервера</b>\n• /status или /info - Получить текущий статус сервера, длину очереди и список игроков онлайн.\n• /tablist или /t - Посмотреть список игроков, находящихся на сервере в данный момент.\n• /playtime_top - Топ игроков с наибольшим игровым временем на 2b2t.\n• /kills_top_month - Топ игроков по количеству убийств за этот месяц.\n\n<b>\uD83D\uDC64 Статистика игроков</b>\n• /player <i>player</i> или /p - Найти подробную статистику по любому игроку (игровое время, смерти, заходы и т.д.).\n• /from <i>player</i> - Найти все сообщения в чате от определенного игрока.\n• Инлайн-режим - Введи в любом чате <code>@{} player</code>, чтобы быстро посмотреть его статистику на 2b2t\n\n<b>\uD83D\uDCAC Чат 2b2t</b>\n• /search <i>Hello!</i> или /s - Искать по всей истории чата 2b2t по фразе или слову.\n• <a href='{}'>Чат 2b2t в реальном времени</a> - Сообщения из чата, сообщения о смертях и подключениях в реальном времени.\n\n<b>⚙\uFE0F Настройки и прочее</b>\n• /settings - Настроить свои предпочтения.\n• /donate - Поддержать разработку этого бота.\n• /help - Показать это сообщение справки.\n\nНаша группа: @the2b2t",
     "userError": "❌ <b>Ошибка</b>\nПроверьте правильность запроса\n\nСправка: /help",
     "invalidData": "❌ <b>Неверные данные</b>\nПроверьте правильность запроса\n\nСправка: /help",
     "error": "❌ <b>Ошибка</b>\nПовторите попытку позже",
@@ -106,9 +111,9 @@
         "chatSearchInvalidQueryLength": "⚠\uFE0F Поисковой запрос должен быть длиной от 3 до 50 символов",
     "outputChatSearchHeader": "<b>Поиск в чате 2b2t</b>\n\n\uD83D\uDD0D Запрос: {}\nℹ\uFE0F Страница: <code>{}</code> / <code>{}</code>\n\uD83D\uDCAC Всего сообщений: <code>{}</code>\n",
     "outputSearchMessagesFromPlayerHeader": "<b>\uD83D\uDD0D Поиск сообщений игрока 2b2t</b>\n\n\uD83D\uDCDD Игрок: <code>{}</code>\n\uD83C\uDD94 UUID: <code>{}</code>\nℹ\uFE0F Страница: <code>{}</code> / <code>{}</code>\n\uD83D\uDCAC Всего сообщений: <code>{}</code>\n",
-    "searchCommandUsage": "Неправильное использование команды.\nИспользование: <code>/search текст</code>, где текст - искомый запрос",
+    "searchCommandUsage": "Неправильное использование команды.\nИспользование: <code>/search Hello!</code>, где текст - искомый запрос",
     "searchMessagesFromPlayerCommandUsage": "Неправильное использование команды.\nИспользование: <code>/from player</code>, где player - username/UUID игрока",
-    "playerStatsCommandUsage": "Неправильное использование команды.\nИспользование: <code>/player player</code>, где player - username/UUID игрока",
+    "playerStatsCommandUsage": "Неправильное использование команды.\nИспользование: <code>/player player_name</code>, где player_name - username/UUID игрока",
     "getPlayerChatMessagesViaPlayerStats": "\uD83D\uDCAC Сообщения игрока в чате",
     "nothingHere": "Тут ничего нет...",
     "playerNotFound": "Игрок не найден!",
@@ -121,6 +126,13 @@
     "inlineGetPlayerStatsSubtitlePlayerWasOn2b2t": "Игровое время {}: {}",
     "inlineEnterPlayerUsernameTitle": "Введите имя игрока 2b2t",
     "inlineEnterPlayerUsernameSubtitle": "Чтобы узнать его статистику на 2b2t",
-    "inlineOpenBot": "\uD83D\uDCDF Подробнее..."
+    "inlineOpenBot": "\uD83D\uDCDF Подробнее...",
+
+    "playerChatMessage": "💬 {}{}: {}",
+    "playerNormalDeath": "☠️ {}{} умер: {}",
+    "playerKilledByPlayer": "☠️ {} {} убил {}: {}",
+    "playerJoinServer": "➕ {}{} присоединился к серверу",
+    "playerLeftServer": "➖ {}{} покинул сервер"
+
   }
 }

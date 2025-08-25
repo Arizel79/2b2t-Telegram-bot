@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
+from models.utils.config import *
 
 async def handler_callback_settings(self, callback: CallbackQuery):
     user_id = callback.from_user.id
@@ -30,7 +30,7 @@ async def handler_callback_settings(self, callback: CallbackQuery):
                                      callback_data=f"settings mainmenu")
             )
             builder.adjust(1)
-            await callback.message.edit_text(await self.get_translation(user_id, "helpMessage"),
+            await callback.message.edit_text(await self.get_translation(user_id, "helpMessage", self.bot_username, CHAT_LIVE_EVENTS_LINK,),
                                              reply_markup=builder.as_markup())
     elif len(lst) == 3:
         if lst[1] == "editlang":

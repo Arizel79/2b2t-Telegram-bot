@@ -203,6 +203,9 @@ class Stats2b2tBot:
             )
             return keyboard
 
+    async def get_reply_keyboard_by_message(self, message: Message):
+        return await self.get_reply_kbd(message.from_user.id, message.chat.id)
+
     async def get_markup_chat_search(self, query_id, user_id=None):
         builder = InlineKeyboardBuilder()
         q_data = await self.db.get_saved_state(query_id)
@@ -440,8 +443,8 @@ class Stats2b2tBot:
                                "user_id": user_id, "page_size": page_size,
                                "via_player_stats": True, "use_uuid": True}
                 query_id = await self.db.add_saved_state(saved_state)
-            return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd'], "player_username": answer["username"], "player_uuid": answer["uuid"]}
-
+            return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd'],
+                    "player_username": answer.get("username"), "player_uuid": answer.get("uuid")}
 
         elif is_valid_minecraft_username(query):
             answer = await self.api_2b2t.get_printable_player_stats(user_id, username=query)
@@ -453,7 +456,8 @@ class Stats2b2tBot:
                                "user_id": user_id, "page_size": page_size,
                                "via_player_stats": True, "use_uuid": True}
                 query_id = await self.db.add_saved_state(saved_state)
-            return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd'], "player_username": answer["username"], "player_uuid": answer["uuid"]}
+            return {"answer": answer['text'], "query_id": query_id, "show_kbd": answer['show_kbd'],
+                    "player_username": answer.get("username"), "player_uuid": answer.get("uuid")}
         else:
             raise self.api_2b2t.Api2b2tError(f"{query} is not a valid username/uuid")
 
@@ -504,6 +508,7 @@ class Stats2b2tBot:
                 )
 
             await self.db.increment_requests(user_id)
+
         elif type(event) == CallbackQuery:
             user_id = event.from_user.id
             await self.write_msg(f"{await self.get_printable_user(event.from_user)} callback: {event.data}")

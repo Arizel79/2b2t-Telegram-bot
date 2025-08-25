@@ -1,6 +1,6 @@
 from aiogram import types
 from aiogram.utils.markdown import html_decoration as hd
-
+from models.utils.config import *
 
 async def handler_help_message(self, message: types.Message) -> None:
     await self.on_event(message)
@@ -10,6 +10,6 @@ async def handler_help_message(self, message: types.Message) -> None:
         await self.get_translation(
             message.from_user.id,
             "helpMessage",
-            hd.quote(message.from_user.first_name)
-        )
+            self.bot_username, CHAT_LIVE_EVENTS_LINK,
+        ), reply_markup=await self.get_reply_keyboard_by_message(message), disable_web_page_preview=True
     )
