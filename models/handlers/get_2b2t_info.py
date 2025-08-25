@@ -1,5 +1,5 @@
 from aiogram import types
-from models.utils import api
+from models.utils import api_wrapper
 
 
 async def handler_get_2b2t_info(self, message: types.Message, register_msg: bool = True) -> None:

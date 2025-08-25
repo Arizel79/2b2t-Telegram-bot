@@ -1,5 +1,5 @@
 from aiogram import types
-from models.utils import api
+from models.utils import api_wrapper
 from models.utils.config import *
 
 

@@ -83,7 +83,7 @@ class Stats2b2tBot:
 
         self.live_events_handler = LiveEventsManager(self)
 
-        self.api_2b2t = api.Api2b2t(self)
+        self.api_2b2t = api_wrapper.Api2b2tWrapper(self)
 
         self.logger.info("Program started")
 

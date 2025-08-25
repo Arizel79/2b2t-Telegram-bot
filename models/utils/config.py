@@ -6,18 +6,18 @@ import os
 
 load_dotenv()
 
-configs = json.load(open("config.json", "r"))
+CONFIGS = json.load(open("config.json", "r"))
 
-TELEGRAM_BOT_TOKEN = configs["configs"]["telegram_bot_token"]
-ADMIN_ID =  configs["configs"]["admin_telegram_id"]
+TELEGRAM_BOT_TOKEN = CONFIGS["configs"]["telegram_bot_token"]
+ADMIN_ID =  CONFIGS["configs"]["admin_telegram_id"]
 
-SEND_LOGS = configs["send_bot_logs"]["bot_logs"]
-LOGS_GROUP_ID= configs["send_bot_logs"]["chat_id"]
-LOGS_GROUP_THREAD_ID = configs["send_bot_logs"]["supergroup_thread_id"]
+SEND_LOGS = CONFIGS["send_bot_logs"]["bot_logs"]
+LOGS_GROUP_ID= CONFIGS["send_bot_logs"]["chat_id"]
+LOGS_GROUP_THREAD_ID = CONFIGS["send_bot_logs"]["supergroup_thread_id"]
 
-LIVE_EVENTS = configs["send_live_events_to_telegram_chat"]
-MAX_TIME_BETWEEN_SENDING_TO_MY_CHATS = configs["max_time_between_sending_to_my_chats"]
-MAX_EVENTS_IN_QUEUE = configs["max_events_in_queue"]
+LIVE_EVENTS = CONFIGS["send_live_events_to_telegram_chat"]
+MAX_TIME_BETWEEN_SENDING_TO_MY_CHATS = 30
+MAX_EVENTS_IN_QUEUE = 8
 
 assert TELEGRAM_BOT_TOKEN != "", "TELEGRAM_BOT_TOKEN is invalid"
 

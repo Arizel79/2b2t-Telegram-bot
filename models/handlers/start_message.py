@@ -9,7 +9,10 @@ async def handler_start_message(self, message: types.Message, register_msg=True)
         return
 
     self.logger.info(f"Bot start command: {message.text}")
-    cmd = message.text.split()[1]
+    try:
+        cmd = message.text.split()[1]
+    except IndexError:
+        cmd = ""
     if cmd.startswith("pl_"):
         await self.handler_get_player_stats(message, register_msg=False)
         return

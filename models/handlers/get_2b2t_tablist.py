@@ -1,6 +1,6 @@
 from aiogram import types
 from aiogram.utils.markdown import html_decoration as hd
-from models.utils import api
+from models.utils import api_wrapper
 from models.utils.config import *
 
 async def handler_get_2b2t_tablist(self, message: types.Message, register_msg: bool = True) -> None:
