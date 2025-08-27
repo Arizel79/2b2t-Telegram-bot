@@ -15,7 +15,7 @@ async def handler_search_messages_from_player(self, message: types.Message, regi
     if not await self.is_handler_msgs(message.from_user.id):
         return
 
-    if self.is_command(message.text):
+    if is_command(message.text):
 
         lst = message.text.split()
         if len(lst) > 1:

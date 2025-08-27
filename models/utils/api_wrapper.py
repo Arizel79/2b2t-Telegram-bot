@@ -26,9 +26,8 @@ class Api2b2tWrapper(Api2b2t):
         super().__init__()
 
     async def get_printable_2b2t_tablist_page(self, query_id):
-
         saved_state = await self.bot.db.get_saved_state(query_id)
-        assert saved_state["type"] == "tablist"
+
         user_id = str(saved_state["user_id"])
         page = int(saved_state["page"])
         page_size = int(saved_state["page_size"])
@@ -82,7 +81,7 @@ class Api2b2tWrapper(Api2b2t):
 
         for n, i in enumerate(playtime_top["players"]):
             n_in_top = (page - 1) * page_size + n + 1
-            out += f"{n_in_top}. <code>{await self.seconds_to_hms(i['playtimeSeconds'], user_id)}</code> - <code>{i['playerName']}</code>\n"
+            out += f"{n_in_top}. <code>{await self.seconds_to_hms(i['playtimeSeconds'], user_id)}</code> {self.get_player_link(i['playerName'], i['uuid'])}\n"
         return out
 
     async def get_printable_kills_top_month(self, query_id):
@@ -99,7 +98,7 @@ class Api2b2tWrapper(Api2b2t):
 
         for n, i in enumerate(kills_top_month["players"]):
             n_in_top = (page - 1) * page_size + n + 1
-            out += f"{n_in_top}. ☠️ <code>{html.escape(str(i['count']))}</code> kills - <code>{html.escape(i['playerName'])}</code>\n"
+            out += f"{n_in_top}. ☠️ <code>{html.escape(str(i['count']))}</code> kills {self.get_player_link(i['playerName'], i['uuid'])}\n"
         return out
 
     async def get_printable_player_stats(self, user_id, username=None, uuid=None):
@@ -266,22 +265,18 @@ class Api2b2tWrapper(Api2b2t):
             pages_count = saved_state["pages_count"] = int(data["pageCount"])
 
             total_results = saved_state["total"] = int(data["total"])
-
-            # out = (f"<b>2b2t chat search</b>\n"
-            #        f"\n"
-            #        f"🔍 Search query: {html.escape(search_query)}\n"
-            #        f"ℹ️ Page: <code>{html.escape(str(search_page))}</code> / <code>{html.escape(str(pages_count))}</code>\n"
-            #        f"💬 Results: <code>{html.escape(str(total_results))}</code>\n"
-            #        f"\n")
             out = await self.bot.get_translation(saved_state["user_id"], "outputChatSearchHeader",
                                                  html.escape(search_query), html.escape(str(search_page)),
                                                  html.escape(str(pages_count)), html.escape(str(total_results)))
             out += "\n"
-
             for i in data["chats"]:
                 out += await self.format_chat_message(i) + "\n"
 
             await self.bot.db.update_saved_state(query_id, saved_state)
+            return out
+
+        except self.MessagesNotFound as e:
+            out = await self.bot.get_translation(saved_state["user_id"], "chatMessagesBySearchQueryNotFound", html.escape(saved_state["word"]))
             return out
         except Exception as e:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
@@ -299,7 +294,7 @@ class Api2b2tWrapper(Api2b2t):
 
             user_id = saved_state["user_id"]
 
-            result = {"username": username, "uuid": uuid}
+            result = {"username": username, "uuid": uuid, "show_nav_kbd": False}
             if use_uuid:
                 player = uuid
             else:
@@ -326,7 +321,7 @@ class Api2b2tWrapper(Api2b2t):
 
             await self.bot.db.update_saved_state(query_id, saved_state)
 
-            result.update({"text": out})
+            result.update({"text": out, "show_nav_kbd": True})
             return result
 
         except self.PlayerNotFoundByUUID:
@@ -338,7 +333,12 @@ class Api2b2tWrapper(Api2b2t):
             result.update({"text": text})
             return result
         except self.PlayerNeverWasOn2b2tError:
+            self.logger.info("Result: playerWasNotOn2b2t")
             text = await self.bot.get_translation(user_id, "playerWasNotOn2b2t", username)
+            result.update({"text": text})
+            return result
+        except self.MessagesNotFound:
+            text = await self.bot.get_translation(user_id, "messagesFromPlayerNotFound", username)
             result.update({"text": text})
             return result
         except self.Api2b2tError as e:

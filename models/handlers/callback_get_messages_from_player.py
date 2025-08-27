@@ -36,6 +36,7 @@ async def handler_search_messages_from_player_callback(self, callback: CallbackQ
                 await self.edit_message_text_or_caption(callback.message, f"{callback.message.html_text}\n\n{await self.get_translation(callback.from_user.id, 'waitPlease')}")
             try:
                 answer = await self.api_2b2t.get_printable_messages_from_player_in_2b2t_chat(query_id)
+
                 await self.edit_message_text_or_caption(callback.message, answer["text"], reply_markup=await self.get_markup_search_messages_from_player(
                     query_id))
             except self.api_2b2t.Api2b2tError:

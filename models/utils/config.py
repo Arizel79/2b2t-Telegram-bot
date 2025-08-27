@@ -3,6 +3,31 @@ import json
 from dotenv import load_dotenv
 import os
 
+import json
+from pathlib import Path
+from aiogram.utils.i18n import I18n
+from aiogram.utils.i18n.middleware import SimpleI18nMiddleware
+
+
+TRACKING_PAGE_SIZE = 5
+# # Базовые настройки
+# BASE_DIR = Path(__file__).parent
+# LOCALES_DIR = 'locales'
+#
+# # Загрузка конфига из JSON
+# with open("config.json", "r") as f:
+#     CONFIGS = json.load(f)
+#
+# TELEGRAM_BOT_TOKEN = CONFIGS["configs"]["telegram_bot_token"]
+# ADMIN_ID = CONFIGS["configs"]["admin_telegram_id"]
+#
+# # Настройка i18n
+# i18n = I18n(path=LOCALES_DIR, default_locale="en", domain="messages")
+# i18n_middleware = SimpleI18nMiddleware(i18n=i18n)
+#
+# # Алиас для gettext
+# _ = i18n.gettext
+
 
 load_dotenv()
 

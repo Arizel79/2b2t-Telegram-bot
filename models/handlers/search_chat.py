@@ -3,7 +3,7 @@ from aiogram import types
 import json
 from random import randint
 from models.utils.config import *
-
+from models.utils.utils import *
 
 async def handler_search_chat(self, message: types.Message, register_msg: bool = True) -> None:
     user_id = message.from_user.id
@@ -13,7 +13,7 @@ async def handler_search_chat(self, message: types.Message, register_msg: bool =
     if not await self.is_handler_msgs(message.from_user.id):
         return
 
-    if self.is_command(message.text):
+    if is_command(message.text):
 
         lst = message.text.split()
         if len(lst) > 1:
@@ -37,7 +37,7 @@ async def handler_search_chat(self, message: types.Message, register_msg: bool =
 
     try:
         answer = await self.api_2b2t.get_printable_2b2t_chat_search_page(query_id)
-        await msg_my.edit_text(answer, reply_markup=await self.get_markup_chat_search(query_id))
+        await msg_my.edit_text(str(answer), reply_markup=await self.get_markup_chat_search(query_id))
 
     except self.api_2b2t.Api2b2tError as e:
         self.logger.error(f"Error in handler_search_chat: {e}")

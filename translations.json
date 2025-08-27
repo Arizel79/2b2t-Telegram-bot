@@ -48,6 +48,8 @@
     "searchMessagesFromPlayerCommandUsage": "Incorrect command usage.\nUsage: <code>/from player</code>, where player is player username/UUID",
     "playerStatsCommandUsage": "Incorrect command usage.\nUsage: <code>/player player</code>, where player is player username/UUID",
     "getPlayerChatMessagesViaPlayerStats": "\uD83D\uDCAC Player's chat messages",
+    "messagesFromPlayerNotFound": "Chat messages from player {} not found",
+    "chatMessagesBySearchQueryNotFound": "Chat messages by search query <code>{}</code> not found!",
     "nothingHere": "There's nothing here...",
     "playerNotFound": "Player not found!",
     "playerNotFoundByUUID": "Player with uuid <code>{}</code> not found!",
@@ -64,8 +66,33 @@
     "playerNormalDeath": "\uD83D\uDC80 {}{} died: {}",
     "playerKilledByPlayer": "☠ {} {} killed {}: {}",
     "playerJoinServer": "➕ {}{} join server",
-        "playerLeftServer": "➖ {}{} left server"
-},
+    "playerLeftServer": "➖ {}{} left server",
+    "trackingNoPlayers": "You are not tracking any players yet.\nUse /track player to start tracking.",
+    "trackingListHeader": "📋 Your tracked players:",
+    "trackingInvalidUsername": "❌ Invalid Minecraft username.",
+    "trackingAlreadyExists": "❌ You are already tracking this player.",
+    "trackingAddUsage": "Usage: <code>/tracking_add player</code>",
+    "trackingAdded": "✅ Now tracking player: {}\n\nEdit players tracking: /tracking",
+    "trackingError": "❌ Error adding player to tracking.",
+    "trackingNotFound": "❌ Tracking not found.",
+    "trackingRemoved": "✅ Removed tracking for: {}",
+    "backToMain": "backToMain",
+    "trackingBackToLIst": "<- back",
+    "trackingStop": "Stop tracking",
+    "trackingNotifyWithoutSound": "\uD83D\uDEAB Without notify",
+    "trackingNotifyWithSound": "🔔 Default notify",
+            "trackingNotifyWithMention": "📢 With mention",
+    "isTracingPlayerMessages": "\uD83D\uDCDD Messages: {}",
+    "isTracingPlayerConnections": "\uD83D\uDD04 Connections: {}",
+    "isTracingPlayerDeaths": "\uD83D\uDC80 Deaths: {}",
+    "isTracingPlayerKills": "⚔\uFE0F Kills: {}",
+    "trackingOptionUpdated": "Option updated",
+    "trackingEditHeader": "⚙️ Управление отслеживанием: <code>{}</code>",
+    "trackingOptionError": "Error",
+    "trackingAddingError": "Error: player not found",
+    "trackingNewPlayerNotify": "{} New notify for {}:\n"
+
+  },
   "ru": {
     "langName": "\uD83C\uDDF7\uD83C\uDDFA Русский",
     "startMessage": "<b>Привет, {}!</b>\nЯ бот для получения различной информации о сервере 2b2t и его игроках.\n\n❓ Мои возможности:\n• <code>/player F_i_l_i_n</code> - Показать статистику игрока на 2b2t\n• /status - Показать текущее состояние 2b2t\n• <code>/search Hello</code> - Выполнить поиск сообщений в чате 2b2t\n• /players_list - Показать список онлайн игроков 2b2t\n\n/help - подробнее\n\nP. S. Наша группа - @the2b2t",
@@ -108,7 +135,7 @@
     "nextPage": "➡\uFE0F",
     "endPage": "⏭\uFE0F",
     "accessDenied": "Доступ запрещён.",
-        "chatSearchInvalidQueryLength": "⚠\uFE0F Поисковой запрос должен быть длиной от 3 до 50 символов",
+    "chatSearchInvalidQueryLength": "⚠\uFE0F Поисковой запрос должен быть длиной от 3 до 50 символов",
     "outputChatSearchHeader": "<b>Поиск в чате 2b2t</b>\n\n\uD83D\uDD0D Запрос: {}\nℹ\uFE0F Страница: <code>{}</code> / <code>{}</code>\n\uD83D\uDCAC Всего сообщений: <code>{}</code>\n",
     "outputSearchMessagesFromPlayerHeader": "<b>\uD83D\uDD0D Поиск сообщений игрока 2b2t</b>\n\n\uD83D\uDCDD Игрок: <code>{}</code>\n\uD83C\uDD94 UUID: <code>{}</code>\nℹ\uFE0F Страница: <code>{}</code> / <code>{}</code>\n\uD83D\uDCAC Всего сообщений: <code>{}</code>\n",
     "searchCommandUsage": "Неправильное использование команды.\nИспользование: <code>/search Hello!</code>, где текст - искомый запрос",
@@ -127,12 +154,10 @@
     "inlineEnterPlayerUsernameTitle": "Введите имя игрока 2b2t",
     "inlineEnterPlayerUsernameSubtitle": "Чтобы узнать его статистику на 2b2t",
     "inlineOpenBot": "\uD83D\uDCDF Подробнее...",
-
     "playerChatMessage": "💬 {}{}: {}",
     "playerNormalDeath": "☠️ {}{} умер: {}",
     "playerKilledByPlayer": "☠️ {} {} убил {}: {}",
     "playerJoinServer": "➕ {}{} присоединился к серверу",
     "playerLeftServer": "➖ {}{} покинул сервер"
-
   }
 }

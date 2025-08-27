@@ -38,10 +38,14 @@ class Api2b2t:
     class PlayerNotFound(Exception):
         pass
 
+
     class PlayerNotFoundByUUID(PlayerNotFound):
         pass
 
     class PlayerNotFoundByUsername(PlayerNotFound):
+        pass
+
+    class MessagesNotFound(Exception):
         pass
 
     def __init__(self):
@@ -278,7 +282,7 @@ class Api2b2t:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as resp:
                     if resp.status == 204:
-                        raise self.PlayerNeverWasOn2b2tError
+                        raise self.MessagesNotFound
                         # return {"chats": [], "total": 0, "pageCount": 0}
                     data = await resp.json()
 
@@ -287,8 +291,10 @@ class Api2b2t:
                     return data
 
         except Exception as e:
+            self.logger.error(f"Error handled and reraised in get_messages_from_player_in_2b2t_chat: {e}")
+            self.logger.exception(e)
             if isinstance(e,
-                          (self.PlayerNeverWasOn2b2tError, self.PlayerNotFoundByUsername, self.PlayerNotFoundByUUID)):
+                          (self.MessagesNotFound, self.PlayerNeverWasOn2b2tError, self.PlayerNotFoundByUsername, self.PlayerNotFoundByUUID)):
                 raise
             else:
                 raise self.Api2b2tError(f"{type(e).__name__}: {e}")
@@ -314,29 +320,13 @@ class Api2b2t:
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as resp:
+                    resp.raise_for_status()
                     data = await resp.json()
                     return data
-
+        except aiohttp.client_exceptions.ContentTypeError:
+            raise self.MessagesNotFound("Messages not found!")
         except Exception as e:
             raise self.Api2b2tError(f"{type(e).__name__}: {e}")
-            # params = {"page": page, "pageSize": page_size}
-            # if from_player:
-            #     params['playerName'] = from_player
-            #
-            # elif not query is None:
-            #     params['word'] = query
-            #
-            #
-            #
-            # if not start_date is None:
-            #     params["startDate"] = json.dumps(start_date.isoformat())
-            #
-            # if not end_date is None:
-            #     params["endDate"] = json.dumps(end_date.isoformat())
-            #
-
-        except requests.exceptions.JSONDecodeError:
-            raise self.Api2b2tError(f"requests.exceptions.JSONDecodeError ({data.text}")
 
     async def safe_listen_sse_stream(self, url, callback: Awaitable):
         while True:
