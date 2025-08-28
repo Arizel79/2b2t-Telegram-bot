@@ -1,15 +1,27 @@
-
 {
   "configs": {
-  "telegram_bot_token": "",
-  "admin_telegram_id": 123456
+    "telegram_bot_token": "TOKEN",
+    "admin_telegram_id": 1234567
   },
   "send_bot_logs": {
-    "bot_logs": false,
-    "chat_id": -100123456,
+    "bot_logs": true,
+    "chat_id": -1001234567,
     "supergroup_thread_id": null
   },
   "send_live_events_to_telegram_chat": [
-
+    {
+      "types": [
+        "chat_message",
+        "death_message",
+        "connection_message"
+      ],
+      "chat_id": -1002553371923,
+      "logs_supergroup_thread_id": null,
+      "max_time_between_sending_to_my_chats": 60,
+      "max_events_in_queue": 16,
+      "timezone": "Europe/Moscow",
+      "lang": "en"
+    },
+    }
   ]
 }
