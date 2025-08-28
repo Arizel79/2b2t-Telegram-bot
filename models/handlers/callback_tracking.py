@@ -12,6 +12,10 @@ async def handler_tracking_callback(self, callback: types.CallbackQuery):
     """Обработка callback для управления отслеживанием"""
     await self.on_event(callback)
 
+    if callback.message.chat.type != "private":
+        await callback.answer(await self.get_translation(callback.from_user.id, "optionUnavailableInPublicChats"), show_alert=True)
+        return
+
     data = callback.data.split()
     if not data:
         return
@@ -113,7 +117,8 @@ async def show_tracking_list(self, callback: types.CallbackQuery, page: int = 1)
     try:
         await callback.message.edit_text(text, reply_markup=builder.as_markup())
     except aiogram.exceptions.TelegramBadRequest as e:
-        self.logger.exception(e)
+        self.logger.debug(f"Error in show_tracking_list: {e}")
+        # self.logger.exception(e)
         if "message is not modified" in str(e):
             return
         await callback.message.reply(text, reply_markup=builder.as_markup())

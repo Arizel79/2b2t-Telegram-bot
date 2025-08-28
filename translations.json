@@ -81,7 +81,7 @@
     "trackingStop": "Stop tracking",
     "trackingNotifyWithoutSound": "\uD83D\uDEAB Without notify",
     "trackingNotifyWithSound": "🔔 Default notify",
-            "trackingNotifyWithMention": "📢 With mention",
+    "trackingNotifyWithMention": "📢 With mention",
     "isTracingPlayerMessages": "\uD83D\uDCDD Messages: {}",
     "isTracingPlayerConnections": "\uD83D\uDD04 Connections: {}",
     "isTracingPlayerDeaths": "\uD83D\uDC80 Deaths: {}",
@@ -90,9 +90,10 @@
     "trackingEditHeader": "⚙️ Управление отслеживанием: <code>{}</code>",
     "trackingOptionError": "Error",
     "trackingAddingError": "Error: player not found",
-    "trackingNewPlayerNotify": "{} New notify for {}:\n"
-
-  },
+    "trackingNewPlayerNotify": "{} New notify for {}:\n",
+    "getTrackingList": "\uD83D\uDDB2 Players tracking",
+    "optionUnavailableInPublicChats": "This option available only in private chats"
+  },ё
   "ru": {
     "langName": "\uD83C\uDDF7\uD83C\uDDFA Русский",
     "startMessage": "<b>Привет, {}!</b>\nЯ бот для получения различной информации о сервере 2b2t и его игроках.\n\n❓ Мои возможности:\n• <code>/player F_i_l_i_n</code> - Показать статистику игрока на 2b2t\n• /status - Показать текущее состояние 2b2t\n• <code>/search Hello</code> - Выполнить поиск сообщений в чате 2b2t\n• /players_list - Показать список онлайн игроков 2b2t\n\n/help - подробнее\n\nP. S. Наша группа - @the2b2t",
@@ -158,6 +159,32 @@
     "playerNormalDeath": "☠️ {}{} умер: {}",
     "playerKilledByPlayer": "☠️ {} {} убил {}: {}",
     "playerJoinServer": "➕ {}{} присоединился к серверу",
-    "playerLeftServer": "➖ {}{} покинул сервер"
+    "playerLeftServer": "➖ {}{} покинул сервер",
+    "trackingNoPlayers": "Вы еще не отслеживаете ни одного игрока.\nИспользуйте /track player, чтобы начать отслеживание.",
+    "trackingListHeader": "📋 Ваши отслеживаемые игроки:",
+    "trackingInvalidUsername": "❌ Неверное имя игрока Minecraft.",
+    "trackingAlreadyExists": "❌ Вы уже отслеживаете этого игрока.",
+    "trackingAddUsage": "Использование: <code>/tracking_add player</code>",
+    "trackingAdded": "✅ Теперь отслеживается игрок: {}\n\nИзменить список отслеживания: /tracking",
+    "trackingError": "❌ Ошибка при добавлении игрока в отслеживание.",
+    "trackingNotFound": "❌ Отслеживание не найдено.",
+    "trackingRemoved": "✅ Удалено отслеживание для: {}",
+    "backToMain": "Назад в главное меню",
+    "trackingBackToLIst": "<- назад",
+    "trackingStop": "Прекратить отслеживание",
+    "trackingNotifyWithoutSound": "🔕 Без уведомления (без звука)",
+    "trackingNotifyWithSound": "🔔 Обычное уведомление",
+    "trackingNotifyWithMention": "📢 С упоминанием",
+    "isTracingPlayerMessages": "✉️ Сообщения: {}",
+    "isTracingPlayerConnections": "🔄 Подключения: {}",
+    "isTracingPlayerDeaths": "💀 Смерти: {}",
+    "isTracingPlayerKills": "⚔️ Убийства: {}",
+    "trackingOptionUpdated": "Настройка обновлена",
+    "trackingEditHeader": "⚙️ Управление отслеживанием: <code>{}</code>",
+    "trackingOptionError": "Ошибка",
+    "trackingAddingError": "Ошибка: игрок не найден",
+    "trackingNewPlayerNotify": "{} Новое уведомление для {}:\n",
+    "getTrackingList": "📊 Отслеживаемые игроки",
+    "optionUnavailableInPublicChats": "Эта опция доступна только в личных чатах"
   }
 }

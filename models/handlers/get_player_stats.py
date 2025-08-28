@@ -1,12 +1,8 @@
-from aiogram.enums import ChatType
-from aiogram import types
-from aiogram.types import InlineKeyboardButton, CallbackQuery
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from models.utils.utils import is_valid_minecraft_username, is_valid_minecraft_uuid
-import json
-from models.utils.config import *
-
 import re
+
+from aiogram import types
+
+from models.utils.utils import is_valid_minecraft_username, is_valid_minecraft_uuid
 
 
 async def handler_get_player_stats(self, message: types.Message, register_msg: bool = True) -> None:
@@ -33,7 +29,8 @@ async def handler_get_player_stats(self, message: types.Message, register_msg: b
             # Разделяем команду и аргументы
             parts = text.split(maxsplit=1)
             if len(parts) < 2:
-                await message.reply(await self.get_translation(message.from_user.id, "playerStatsCommandUsage"), reply_markup=await self.get_reply_keyboard_by_message(message))
+                await message.reply(await self.get_translation(message.from_user.id, "playerStatsCommandUsage"),
+                                    reply_markup=await self.get_reply_keyboard_by_message(message))
                 return
             player = parts[1].strip()
     else:
@@ -41,9 +38,11 @@ async def handler_get_player_stats(self, message: types.Message, register_msg: b
         player = text.strip()
 
     # Проверяем валидность имени игрока
-    if not is_valid_minecraft_username(player):
-        await message.reply(await self.get_translation(message.from_user.id, "userError"), reply_markup=await self.get_reply_keyboard_by_message(message))
+    if not is_valid_minecraft_username(player) and not is_valid_minecraft_uuid(player):
+        await message.reply(await self.get_translation(message.from_user.id, "userError"),
+                            reply_markup=await self.get_reply_keyboard_by_message(message))
         return
 
-    msg = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"), reply_markup=await self.get_reply_keyboard_by_message(message))
+    msg = await message.reply(await self.get_translation(message.from_user.id, "waitPlease"),
+                              reply_markup=await self.get_reply_keyboard_by_message(message))
     await self.get_player_stats_and_edit_message(message.from_user.id, player, msg)

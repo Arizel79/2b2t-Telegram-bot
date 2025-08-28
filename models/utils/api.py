@@ -8,6 +8,8 @@ from aiogram.types.inline_keyboard_button import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import requests
 
+from async_lru import alru_cache
+
 from datetime import datetime, timezone
 from typing import Dict, Any
 import aiohttp
@@ -22,6 +24,7 @@ import json
 class Api2b2t:
     GET_2B2T_INFO_CACHE_TIME = 60  # sec
     GET_2B2T_TABLIST_CACHE_TIME = 60  # sec
+    GET_DATA_FROM_MOJANG_API_CACHE_TIME = 300 # sec
     GET_2B2T_PLAYTIME_TOP = 60 * 30  # sec
     GET_2B2T_KILLS_TOP_MONTH = 10  # sec
     GET_2B2T_DEATHS_TOPA_MONTH = 10  # sec
@@ -84,8 +87,10 @@ class Api2b2t:
 
         if is_uuid:
             username = await self.get_username_from_uuid(uuid)
+            uuid = await self.get_uuid_from_username(username)
         elif not is_uuid:
             uuid = await self.get_uuid_from_username(username)
+            username = await self.get_username_from_uuid(uuid)
         else:
             assert False
 
@@ -355,7 +360,7 @@ class Api2b2t:
             except Exception as e:
                 self.logger.error(f"Error in listen_sse_steam: {e}")
                 self.logger.exception(e)
-                raise self.Api2b2tError(f"SSE-connection error: {e}")
+
 
     async def listen_to_chats_feed(self, callback: Awaitable[dict]):
         await self.safe_listen_sse_stream("https://api.2b2t.vc/feed/chats", callback)
@@ -366,6 +371,7 @@ class Api2b2t:
     async def listen_to_deaths_feed(self, callback: Awaitable[dict]):
         await self.safe_listen_sse_stream("https://api.2b2t.vc/feed/deaths", callback)
 
+    @alru_cache(ttl=GET_DATA_FROM_MOJANG_API_CACHE_TIME)
     async def get_uuid_from_username(self, username):
         """Получает UUID игрока по его никнейму (асинхронно)."""
         url = f"https://api.mojang.com/users/profiles/minecraft/{username}"
@@ -389,6 +395,7 @@ class Api2b2t:
                     self.logger.error(f"While getting uuid for username={username}: Error code {response.status}: ")
                     raise self.PlayerNotFoundByUsername(f"Player {username} not found")
 
+    @alru_cache(ttl=GET_DATA_FROM_MOJANG_API_CACHE_TIME)
     async def get_username_from_uuid(self, uuid):
         """Получает текущий никнейм игрока по его UUID (асинхронно)."""
 
@@ -412,6 +419,7 @@ class Api2b2t:
 
                     else:
                         raise self.Api2b2tError(f"HTTP status: {response.status}; uuid={uuid}")
+
 
     async def get_visage_urls(self, username: str, scale: int = 1000) -> dict:
         """Получает скины через Visage API"""

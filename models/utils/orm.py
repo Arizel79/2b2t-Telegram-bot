@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from models.utils.utils import *
+from aiogram.types import Message, InlineQuery, CallbackQuery
 Base = declarative_base()
 
 
@@ -13,6 +14,8 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
+    username = Column(String, default='')
+    name = Column(String, default='')
     lang = Column(String, default='')
     state = Column(String, default='')
     first_use = Column(DateTime, default=datetime.now)
@@ -55,6 +58,32 @@ class AsyncDatabaseSession:
             await conn.run_sync(Base.metadata.create_all)
         self.logger.debug("database created")
 
+    async def update_credentials(self, event: Message | CallbackQuery) -> None:
+        # Извлекаем пользователя из события
+        user_from_event = event.from_user
+        user_id = user_from_event.id
+        username = f"@{user_from_event.username}" if user_from_event.username else None
+        name = user_from_event.full_name
+
+        async with self.async_session() as session:
+            # Пытаемся получить пользователя из БД
+            user = await session.get(User, user_id)
+
+            if user:
+                # Обновляем данные существующего пользователя
+                user.username = username
+                user.name = name
+            else:
+                # Создаем нового пользователя
+                new_user = User(
+                    id=user_id,
+                    username=username,
+                    name=name
+                )
+                session.add(new_user)
+
+            # Сохраняем изменения в БД
+            await session.commit()
     # Tracking методы
     async def add_player_tracking(self, user_id: int, player_username: str, player_uuid: str,
                                   notify_messages=True, notify_connections=True,

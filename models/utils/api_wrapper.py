@@ -11,6 +11,8 @@ import requests
 from datetime import datetime, timezone
 from typing import Dict, Any
 import aiohttp
+from sqlalchemy.util import await_only
+
 from models.utils.config import *
 from models.utils.utils import *
 import logging
@@ -41,7 +43,7 @@ class Api2b2tWrapper(Api2b2t):
         out += "\n"
 
         for n, pl in enumerate(tablist["players"]):
-            out += f"{self.get_player_link(pl['playerName'], pl['uuid'])}{', ' if n + 1 < page_size else ''}"
+            out += f"{await self.get_player_link(pl['playerName'], pl['uuid'])}{', ' if n + 1 < page_size else ''}"
         out += "\n\n"
 
         return out
@@ -81,7 +83,7 @@ class Api2b2tWrapper(Api2b2t):
 
         for n, i in enumerate(playtime_top["players"]):
             n_in_top = (page - 1) * page_size + n + 1
-            out += f"{n_in_top}. <code>{await self.seconds_to_hms(i['playtimeSeconds'], user_id)}</code> {self.get_player_link(i['playerName'], i['uuid'])}\n"
+            out += f"{n_in_top}. <code>{await self.seconds_to_hms(i['playtimeSeconds'], user_id)}</code> {await self.get_player_link(i['playerName'], i['uuid'])}\n"
         return out
 
     async def get_printable_kills_top_month(self, query_id):
@@ -98,7 +100,7 @@ class Api2b2tWrapper(Api2b2t):
 
         for n, i in enumerate(kills_top_month["players"]):
             n_in_top = (page - 1) * page_size + n + 1
-            out += f"{n_in_top}. ☠️ <code>{html.escape(str(i['count']))}</code> kills {self.get_player_link(i['playerName'], i['uuid'])}\n"
+            out += f"{n_in_top}. ☠️ <code>{html.escape(str(i['count']))}</code> kills {await self.get_player_link(i['playerName'], i['uuid'])}\n"
         return out
 
     async def get_printable_player_stats(self, user_id, username=None, uuid=None):
@@ -139,7 +141,7 @@ class Api2b2tWrapper(Api2b2t):
             online = ("\n" + await self.bot.get_translation(user_id, 'isPlayerOnline')) if is_player_online else ''
 
             text = await self.bot.get_translation(user_id, "playerStats",
-                                                  self.get_player_link(data["username"]), online, data["username"],
+                                                  await self.get_player_link(data["username"], data["uuid"]), online, data["username"],
                                                   data["uuid"],
                                                   await self.format_user_time(user_id, data['firstSeen'], with_closers=False),
                                                   await self.format_user_time(user_id, data['lastSeen'],  with_closers=False),
@@ -196,7 +198,7 @@ class Api2b2tWrapper(Api2b2t):
         message_ = f"<code>{html.escape(message['chat'])}</code>"
         if bool(message.get("playerName", False)):
             uuid = message.get("playerUuid") or message.get("uuid")
-            player = self.get_player_link(message["playerName"], uuid)
+            player = await self.get_player_link(message["playerName"], uuid)
             return await self.bot.translator.get_get_translation_by_lang(lang, "playerChatMessage", time_, " " + player,
                                                                          message_)
         else:
@@ -207,10 +209,10 @@ class Api2b2tWrapper(Api2b2t):
             time_ = await self.format_time(message['time'],  only_time=only_time, to_tz=to_tz) + " "
         else:
             time_ = ""
-        victim = self.get_player_link(message["victimPlayerName"], message["victimPlayerUuid"])
+        victim = await self.get_player_link(message["victimPlayerName"], message["victimPlayerUuid"])
         death_message = message["deathMessage"]
         if not message["killerPlayerName"] is None:
-            killer = self.get_player_link(message["killerPlayerName"], message["killerPlayerUuid"])
+            killer = await self.get_player_link(message["killerPlayerName"], message["killerPlayerUuid"])
             return await self.bot.translator.get_get_translation_by_lang(lang, "playerKilledByPlayer", time_, killer, victim, f"<code>{html.escape(death_message)}</code>")
         else:
             return await self.bot.translator.get_get_translation_by_lang(lang, "playerNormalDeath", time_, victim, f"<code>{html.escape(death_message)}</code>")
@@ -221,7 +223,7 @@ class Api2b2tWrapper(Api2b2t):
         else:
             time_ = ""
         type_ = message["connection"]
-        player = self.get_player_link(message["playerName"], message["playerUuid"])
+        player = await self.get_player_link(message["playerName"], message["playerUuid"])
         tm = time_ + " " if with_time else ""
         if type_ == "JOIN":
             return await self.bot.translator.get_get_translation_by_lang(lang, "playerJoinServer", tm, player)
@@ -236,17 +238,18 @@ class Api2b2tWrapper(Api2b2t):
             out = f"{url}"
         return out
 
-    def get_player_stats_link(self, player, formatting=True):
-
-        url = f"https://t.me/{self.bot.bot_username}?start=pl_{player}"
+    async def get_player_stats_link(self, username, uuid, formatting=True):
+        if not is_valid_minecraft_uuid(uuid):
+            uuid = username
+        url = f"https://t.me/{self.bot.bot_username}?start=pl_{uuid}"
         if formatting:
-            out = f"<a href='{html.escape(url)}'>{html.escape(player)}</a>"
+            out = f"<a href='{html.escape(url)}'>{html.escape(username)}</a>"
         else:
             out = f"{url}"
         return out
 
-    def get_player_link(self, username, uuid=None, formatting=True):
-        return self.get_player_stats_link(username, formatting)
+    async def get_player_link(self, username, uuid, formatting=True):
+        return await  self.get_player_stats_link(username, uuid, formatting)
         # if formatting:
         #     out = f"<code>{html.escape(username)}</code>"
         # else:
