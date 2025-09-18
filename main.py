@@ -127,7 +127,7 @@ class Stats2b2tBot:
 
         self.dp.message(Command("player", "pl", "p"))(self.handler_get_player_stats)
         self.dp.message(Command("i", "info", "stats", "stat", "status"))(self.handler_get_2b2t_info)
-        self.dp.message(Command("tab", "pl_list", "tablist"))(self.handler_get_2b2t_tablist)
+        self.dp.message(Command("tab", "pl_list", "tablist", "players_list"))(self.handler_get_2b2t_tablist)
         self.dp.message(Command("from"))(self.handler_search_messages_from_player)
         self.dp.message(Command("track", "tracking", "t", ""))(self.handler_tracking_command)
         self.dp.message(Command("track_add", "tracking_add", "t_add"))(self.handler_tracking_add_command)
