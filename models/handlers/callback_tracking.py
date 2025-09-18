@@ -74,8 +74,9 @@ async def show_tracking_list(self, callback: types.CallbackQuery, page: int = 1)
     if not trackings:
         text = await self.get_translation(user_id, "noTrackings")
         builder = InlineKeyboardBuilder()
-        await callback.message.edit_text(text, reply_markup=builder.as_markup())
+        await callback.message.reply(text, reply_markup=builder.as_markup())
         return
+
 
     # Рассчитываем пагинацию
     total_pages = math.ceil(len(trackings) / TRACKING_PAGE_SIZE)

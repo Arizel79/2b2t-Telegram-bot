@@ -92,7 +92,8 @@
     "trackingAddingError": "Error: player not found",
     "trackingNewPlayerNotify": "{} New notify for {}:\n",
     "getTrackingList": "\uD83D\uDDB2 Players tracking",
-    "optionUnavailableInPublicChats": "This option available only in private chats"
+    "optionUnavailableInPublicChats": "This option available only in private chats",
+        "noTrackings": "Отслеживаемые игроки отсутствуют. Используйте <code>/tracking_add player</code>, чтобы отслеживать игрока"
   },
   "ru": {
     "langName": "\uD83C\uDDF7\uD83C\uDDFA Русский",
@@ -182,6 +183,7 @@
     "isTracingPlayerDeaths": "💀 Смерти: {}",
     "isTracingPlayerKills": "⚔️ Убийства: {}",
     "trackingOptionUpdated": "Настройка обновлена",
+    "noTrackings": "Отслеживаемые игроки отсутствуют. Используйте <code>/tracking_add player</code>, чтобы отслеживать игрока",
 
     "trackingEditHeader": "⚙️ Управление отслеживанием: <code>{}</code>",
     "trackingOptionError": "Ошибка",
