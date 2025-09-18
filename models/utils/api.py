@@ -340,6 +340,7 @@ class Api2b2t:
             except Exception as e:
                 self.logger.error(f"Error in safe_listen_sse_stream: {e}")
                 self.logger.exception(e)
+            await asyncio.sleep(.5)
 
     async def listen_sse_stream(self, url, callback: Awaitable):
         async with aiohttp.ClientSession() as session:

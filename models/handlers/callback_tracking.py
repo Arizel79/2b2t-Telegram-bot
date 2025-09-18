@@ -95,22 +95,14 @@ async def show_tracking_list(self, callback: types.CallbackQuery, page: int = 1)
     # Создаем клавиатуру
     builder = InlineKeyboardBuilder()
 
-    # Кнопки для каждого отслеживания на странице
     for tracking in page_trackings:
         status = "☑️" if tracking.is_active else "❌"
         builder.row(InlineKeyboardButton(
-            text=f"{status} ⚙️ {tracking.player_username}",
+            text=f"{status} {tracking.player_username}",
             callback_data=f"tracking_manage {tracking.id}"
         ), width=1)
 
-    # Размещаем кнопки игроков по одной в ряд
-
-
-    # Добавляем навигацию, если есть больше одной страницы
     if total_pages > 1:
-        # Добавляем разделитель
-
-        # Добавляем кнопки навигации
         builder.row(*await self.get_nav_buttons(user_id=callback.from_user.id,
                                               callback_perfix="tracking_list", current_page=page,
                                               page_size=TRACKING_PAGE_SIZE, pages_count=total_pages), width=5)
@@ -118,7 +110,6 @@ async def show_tracking_list(self, callback: types.CallbackQuery, page: int = 1)
         await callback.message.edit_text(text, reply_markup=builder.as_markup())
     except aiogram.exceptions.TelegramBadRequest as e:
         self.logger.debug(f"Error in show_tracking_list: {e}")
-        # self.logger.exception(e)
         if "message is not modified" in str(e):
             return
         await callback.message.reply(text, reply_markup=builder.as_markup())
@@ -139,10 +130,22 @@ async def show_tracking_management(self, callback: types.CallbackQuery, tracking
 
     # Кнопки включения/выключения уведомлений
     on, off = '✅', '❌'
+
+    state_is_active = on if tracking.is_active else off
     state_notify_messages = on if tracking.notify_messages else off
     state_notify_connections = on if tracking.notify_connections else off
     state_notify_deaths = on if tracking.notify_deaths else off
     state_notify_kills = on if tracking.notify_kills else off
+    if tracking.is_active:
+        is_active_button = "trackingPause"
+    else:
+        is_active_button = "trackingResume"
+    print("Is_act", state_is_active)
+
+    builder.add(InlineKeyboardButton(
+        text=await self.get_translation(callback.from_user.id, is_active_button, state_notify_kills),
+        callback_data=f"tracking_toggle {tracking.id} is_active"
+    ))
     builder.add(InlineKeyboardButton(
         text=await self.get_translation(callback.from_user.id, "isTracingPlayerMessages", state_notify_messages),
         callback_data=f"tracking_toggle {tracking.id} messages"
@@ -196,7 +199,8 @@ async def toggle_tracking_setting(self, callback: types.CallbackQuery, tracking_
         'messages': 'notify_messages',
         'connections': 'notify_connections',
         'deaths': 'notify_deaths',
-        'kills': 'notify_kills'
+        'kills': 'notify_kills',
+        "is_active": "is_active"
     }
 
     if setting_type not in setting_map:
@@ -250,7 +254,7 @@ async def delete_tracking(self, callback: types.CallbackQuery, tracking_id: int)
     success = await self.db.delete_player_tracking(tracking_id)
 
     if success:
-        await callback.answer(await self.get_translation(callback.from_user.id, "trackingOptionUpdated"))
+        await callback.answer(await self.get_translation(callback.from_user.id, "trackingRemoved", ))
         # Возвращаемся к списку на той же странице
         await show_tracking_list(self, callback, page)
     else:

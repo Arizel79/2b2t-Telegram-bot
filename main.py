@@ -237,7 +237,7 @@ class Stats2b2tBot:
 
     async def send_message_to_logs_chat(self, message, *args, **kwargs):
         if SEND_LOGS:
-            self.logger.info(f"Logging: {message}, {args}, {kwargs}")
+            self.logger.info(f"Sending to admin: {message}, {args}, {kwargs}")
             await self.bot.send_message(LOGS_GROUP_ID,
                                         message, *args, **kwargs,
                                         message_thread_id=LOGS_GROUP_THREAD_ID)

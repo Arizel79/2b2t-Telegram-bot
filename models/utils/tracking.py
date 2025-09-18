@@ -35,7 +35,7 @@ class TrackingManager:
                     event_type == "connection_message" and not tracking.notify_connections or
                     event_type == "death_message" and not tracking.notify_deaths):
                 return
-            self.logger.info(f"Notifying {await self.bot.get_printable_user(user_id=user_id)}")
+            # self.logger.info(f"Notifying {await self.bot.get_printable_user(user_id=user_id)}")
 
             # Форматируем сообщение
             if event_type == "chat_message":
