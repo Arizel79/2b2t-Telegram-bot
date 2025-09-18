@@ -68,7 +68,7 @@
     "playerJoinServer": "➕ {}{} join server",
     "playerLeftServer": "➖ {}{} left server",
     "trackingNoPlayers": "You are not tracking any players yet.\nUse /track player to start tracking.",
-    "trackingListHeader": "📋 Your tracked players:",
+    "trackingListHeader": "<b>\uD83D\uDCCB Your Tracked Players</b>\n\nThe bot will notify you if a player on this list logs into/out of 2b2t, sends a message in chat, dies, or kills someone. Use the buttons below to configure player tracking.\n\nStart tracking a player: <code>/tracking_add player</code>",
     "trackingInvalidUsername": "❌ Invalid Minecraft username.",
     "trackingAlreadyExists": "❌ You are already tracking this player.",
     "trackingAddUsage": "Usage: <code>/tracking_add player</code>",
@@ -77,8 +77,8 @@
     "trackingNotFound": "❌ Tracking not found.",
     "trackingRemoved": "✅ Removed tracking for: {}",
     "backToMain": "backToMain",
-    "trackingBackToLIst": "<- back",
-    "trackingStop": "Stop tracking",
+    "trackingBackToLIst": "\uD83D\uDD19 Back",
+    "trackingStop": "\uD83D\uDDD1 Stop tracking",
     "trackingNotifyWithoutSound": "\uD83D\uDEAB Without notify",
     "trackingNotifyWithSound": "🔔 Default notify",
     "trackingNotifyWithMention": "📢 With mention",
@@ -91,9 +91,12 @@
     "trackingOptionError": "Error",
     "trackingAddingError": "Error: player not found",
     "trackingNewPlayerNotify": "{} New notify for {}:\n",
-    "getTrackingList": "\uD83D\uDDB2 Players tracking",
+    "getTrackingList": "\uD83D\uDC40 Players tracking",
     "optionUnavailableInPublicChats": "This option available only in private chats",
-        "noTrackings": "Отслеживаемые игроки отсутствуют. Используйте <code>/tracking_add player</code>, чтобы отслеживать игрока"
+
+    "trackingPause": "⏸️ Pause tracking",
+    "trackingResume": "▶️ Resume tracking",
+    "noTrackings": "No tracked players yet. Use <code>/tracking_add player</code> to start tracking a player"
   },
   "ru": {
     "langName": "\uD83C\uDDF7\uD83C\uDDFA Русский",
@@ -162,7 +165,7 @@
     "playerJoinServer": "➕ {}{} присоединился к серверу",
     "playerLeftServer": "➖ {}{} покинул сервер",
     "trackingNoPlayers": "Вы еще не отслеживаете ни одного игрока.\nИспользуйте /track player, чтобы начать отслеживание.",
-    "trackingListHeader": "<b>📋 Ваши отслеживаемые игроки</b>\n\nБот сообщит вам если игрок, который находится этом списке сделает что-то. Нажмите на кнопки ниже, чтобы настроить отслеживание игроков ",
+    "trackingListHeader": "<b>📋 Ваши отслеживаемые игроки</b>\n\nБот сообщит вам если игрок, который находится этом списке зайдёт/выйдет с 2b2t, отправит сообщение в чат, умрёт или убьёт кого-то. Нажмите на кнопки ниже, чтобы настроить отслеживание игроков\n\nНачать отслеживать игрока: <code>/tracking_add player</code>",
     "trackingInvalidUsername": "❌ Неверное имя игрока Minecraft.",
     "trackingAlreadyExists": "❌ Вы уже отслеживаете этого игрока.",
     "trackingAddUsage": "Использование: <code>/tracking_add player</code>",
@@ -171,7 +174,7 @@
     "trackingNotFound": "❌ Отслеживание не найдено.",
     "trackingRemoved": "✅ Удалено отслеживание",
     "backToMain": "Назад в главное меню",
-    "trackingBackToLIst": "<- назад",
+    "trackingBackToLIst": "\uD83D\uDD19 Назад",
     "trackingStop": "\uD83D\uDDD1 Прекратить отслеживание",
     "trackingPause": "⏸\uFE0F Приостановить отслеживание",
     "trackingResume": "▶\uFE0F Возобновить отслеживание",
@@ -189,7 +192,7 @@
     "trackingOptionError": "Ошибка",
     "trackingAddingError": "Ошибка: игрок не найден",
     "trackingNewPlayerNotify": "{} Новое уведомление для {}:\n",
-    "getTrackingList": "📊 Отслеживаемые игроки",
+    "getTrackingList": "\uD83D\uDC40 Отслеживание",
     "optionUnavailableInPublicChats": "Эта опция доступна только в личных чатах"
   }
 }
